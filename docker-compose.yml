@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # 1. Orquestador de Workflows
+  n8n:
+    image: n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - [cite_start]N8N_METRICS=true # Habilita el endpoint de métricas para Prometheus 
+      - [cite_start]EXECUTIONS_PROCESS=main # Configuración recomendada para producción 
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - datalive-net
+    healthcheck:
+      # Verifica si la API de n8n está respondiendo
+      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 2. Base de datos Relacional, de Grafo (KAG) y Cache (CAG)
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      # AVISO: Placeholders. Se gestionarán con Docker Secrets.
+      - POSTGRES_USER=placeholder_user
+      - POSTGRES_PASSWORD=placeholder_password
+      - POSTGRES_DB=datalive_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - datalive-net
+    healthcheck:
+      # Comando nativo de Postgres para verificar si el servidor está listo
+      test: ["CMD-SHELL", "pg_isready -U placeholder_user -d datalive_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # 3. Base de Datos Vectorial (RAG)
+  qdrant:
+    image: qdrant/qdrant
+    restart: always
+    ports:
+      - "6333:6333" # Puerto REST
+      - "6334:6334" # Puerto gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - datalive-net
+    healthcheck:
+      # Verifica si el endpoint de salud de Qdrant está listo
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s # Da tiempo a Qdrant para iniciarse antes de empezar a verificar
+
+  # 4. Servidor de LLMs y Embeddings
+  ollama:
+    image: ollama/ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - datalive-net
+    # deploy: # Descomentar para habilitar la aceleración por GPU si está disponible
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      # Verifica si el servidor de Ollama está respondiendo
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# --- Definiciones de Nivel Superior ---
+
+volumes:
+  n8n_data:
+  postgres_data:
+  qdrant_data:
+  ollama_data:
+
+networks:
+  datalive-net:
+    driver: bridge
