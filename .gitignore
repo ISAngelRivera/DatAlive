@@ -1,0 +1,88 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Secrets - NEVER commit these!
+secrets/
+*.key
+*.pem
+*.crt
+*.p12
+
+# Docker volumes
+volumes/
+data/
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+*.sql
+*.dump
+*.tar.gz
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# N8N
+n8n_data/
+.n8n/
+
+# MinIO data
+minio_data/
+
+# Database dumps
+*.sql.gz
+postgres_data/
+qdrant_data/
+
+# Model files (too large)
+ollama_models/
+*.gguf
+*.bin
+
+# Monitoring data
+prometheus_data/
+grafana_data/
+loki_data/
+
+# Keep example files
+!*.example
+!.env.example
+
+# Generated credential files
+config/n8n/credential-ids.env
+config/n8n/setup-summary.txt
+config/minio/service-keys.env
+config/ollama/init-summary.txt
