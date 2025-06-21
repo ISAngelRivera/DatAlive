@@ -1,7 +1,0 @@
-http://localhost:3000 , grafana si 
-http://localhost:5678 , no me carga la pagina, supongo que algo de la configuracion que le hacemos lo esta rompiendo y habra que arreglarlo, la parte de configurar ya el nombre por defecto la key y todo eso. 
-http://localhost:9001 , tampoco puedo acceder , esta caido via web 
-http://localhost:6333/dashboard , tambien esta roto 
-esto puedes comprobarlo tu con curl , supongo que igual que el de grafana que si funciona da angelrivera@MacBook-Air-de-Angel DatAlive % curl http://localhost:3000 
-<a href="/login">Found</a>. con los otros algo se podra hacer para comprobar que si funcionan correctamente
-esta documentacion te podria ser util para el modelo phi - https://ollama.com/library/phi4-mini , en la pagina de olllama tambien habra guias que resuelvan tus dudas de configuracion 
