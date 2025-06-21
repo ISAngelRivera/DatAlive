@@ -1,0 +1,352 @@
+{
+    "name": "Query Pattern Optimizer",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 1
+              }
+            ]
+          }
+        },
+        "id": "schedule-trigger",
+        "name": "Hourly Analysis",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [250, 300]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT query_text, COUNT(*) as frequency, AVG(total_time_ms) as avg_time, MIN(created_at) as first_seen, MAX(created_at) as last_seen FROM monitoring.query_logs WHERE created_at > NOW() - INTERVAL '24 hours' AND cache_hit = false GROUP BY query_text HAVING COUNT(*) >= 3 ORDER BY frequency DESC LIMIT 20"
+        },
+        "id": "get-frequent-queries",
+        "name": "Get Frequent Queries",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.2,
+        "position": [450, 300],
+        "credentials": {
+          "postgres": {
+            "id": "{{POSTGRES_CREDENTIAL_ID}}"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Analyze query patterns and group similar queries\nconst queries = $input.all();\nconst patterns = new Map();\n\n// Helper function to normalize queries\nfunction normalizeQuery(query) {\n  return query.toLowerCase()\n    .replace(/[¿?¡!,.]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Helper to extract key terms\nfunction extractKeyTerms(query) {\n  const stopWords = new Set(['el', 'la', 'de', 'en', 'y', 'a', 'los', 'las', 'por', 'para', 'con', 'sin', 'sobre', 'como', 'cuando', 'donde', 'the', 'is', 'at', 'which', 'on', 'and', 'or', 'but']);\n  return query.split(' ').filter(word => !stopWords.has(word) && word.length > 2);\n}\n\n// Group similar queries\nqueries.forEach(item => {\n  const query = item.json.query_text;\n  const normalized = normalizeQuery(query);\n  const keyTerms = extractKeyTerms(normalized);\n  const patternKey = keyTerms.sort().join(' ');\n  \n  if (!patterns.has(patternKey)) {\n    patterns.set(patternKey, {\n      pattern: patternKey,\n      queries: [],\n      totalFrequency: 0,\n      avgTime: 0,\n      keyTerms: keyTerms\n    });\n  }\n  \n  const pattern = patterns.get(patternKey);\n  pattern.queries.push({\n    text: query,\n    frequency: item.json.frequency,\n    avgTime: item.json.avg_time\n  });\n  pattern.totalFrequency += parseInt(item.json.frequency);\n});\n\n// Convert to array and calculate averages\nconst patternArray = Array.from(patterns.values()).map(pattern => {\n  pattern.avgTime = pattern.queries.reduce((sum, q) => sum + q.avgTime, 0) / pattern.queries.length;\n  pattern.representativeQuery = pattern.queries.sort((a, b) => b.frequency - a.frequency)[0].text;\n  return pattern;\n});\n\n// Sort by total frequency\npatternArray.sort((a, b) => b.totalFrequency - a.totalFrequency);\n\n// Return top patterns for caching\nreturn patternArray.slice(0, 10).map(pattern => ({\n  pattern: pattern.pattern,\n  representativeQuery: pattern.representativeQuery,\n  totalFrequency: pattern.totalFrequency,\n  avgTime: Math.round(pattern.avgTime),\n  keyTerms: pattern.keyTerms,\n  shouldCache: pattern.totalFrequency >= 5 && pattern.avgTime > 500\n}));"
+        },
+        "id": "analyze-patterns",
+        "name": "Analyze Query Patterns",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [650, 300]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {
+                "value1": "={{$json.shouldCache}}",
+                "value2": true
+              }
+            ]
+          }
+        },
+        "id": "should-cache-check",
+        "name": "Should Cache?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [850, 300]
+      },
+      {
+        "parameters": {
+          "model": "{{$env.OLLAMA_EMBED_TEXT_PRIMARY}}",
+          "prompt": "search_query: {{$json.representativeQuery}}"
+        },
+        "id": "generate-embedding",
+        "name": "Generate Pattern Embedding",
+        "type": "@n8n/n8n-nodes-ollama.ollama",
+        "typeVersion": 1,
+        "position": [1050, 200],
+        "credentials": {
+          "ollamaApi": {
+            "id": "{{OLLAMA_CREDENTIAL_ID}}"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "collection": "documents",
+          "vector": "={{$json.embedding}}",
+          "limit": 10,
+          "withPayload": true,
+          "scoreThreshold": 0.7
+        },
+        "id": "pre-fetch-results",
+        "name": "Pre-fetch Results",
+        "type": "@n8n/n8n-nodes-qdrant.qdrant",
+        "typeVersion": 1,
+        "position": [1250, 200],
+        "credentials": {
+          "qdrantApi": {
+            "id": "{{QDRANT_CREDENTIAL_ID}}"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Build optimized context for pattern\nconst pattern = $node[\"should-cache-check\"].json;\nconst results = $input.all();\n\n// Extract and optimize context\nconst contexts = results\n  .map(r => ({\n    content: r.json.payload.content,\n    score: r.json.score,\n    metadata: r.json.payload.metadata\n  }))\n  .sort((a, b) => b.score - a.score)\n  .slice(0, 5);\n\nconst contextString = contexts\n  .map((c, i) => `[Context ${i+1}]\\n${c.content}`)\n  .join('\\n\\n');\n\nreturn {\n  pattern: pattern.pattern,\n  representativeQuery: pattern.representativeQuery,\n  context: contextString,\n  sources: contexts.map(c => c.metadata),\n  keyTerms: pattern.keyTerms,\n  totalFrequency: pattern.totalFrequency\n};"
+        },
+        "id": "build-optimized-context",
+        "name": "Build Optimized Context",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [1450, 200]
+      },
+      {
+        "parameters": {
+          "model": "{{$env.OLLAMA_LLM_PRIMARY}}",
+          "prompt": "You are preparing an optimized answer for a frequently asked question. Generate a comprehensive response that can be cached.\n\nFrequent Query Pattern: {{$json.representativeQuery}}\nKey Terms: {{$json.keyTerms.join(', ')}}\n\nContext:\n{{$json.context}}\n\nGenerate a detailed, helpful response that would satisfy most variations of this query:",
+          "options": {
+            "temperature": 0.3,
+            "maxTokens": 1000
+          }
+        },
+        "id": "generate-cached-response",
+        "name": "Generate Cached Response",
+        "type": "@n8n/n8n-nodes-ollama.ollama",
+        "typeVersion": 1,
+        "position": [1650, 200],
+        "credentials": {
+          "ollamaApi": {
+            "id": "{{OLLAMA_CREDENTIAL_ID}}"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "set",
+          "key": "pattern:{{$json.pattern}}",
+          "value": "={{JSON.stringify({response: $json.response, sources: $node[\"build-optimized-context\"].json.sources, pattern: $json.pattern, keyTerms: $json.keyTerms, generatedAt: new Date().toISOString()})}}",
+          "expire": true,
+          "ttl": 86400
+        },
+        "id": "cache-pattern-response",
+        "name": "Cache Pattern Response",
+        "type": "@n8n/n8n-nodes-redis.redis",
+        "typeVersion": 1,
+        "position": [1850, 200],
+        "credentials": {
+          "redis": {
+            "id": "{{REDIS_CREDENTIAL_ID}}"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO cag.query_patterns (pattern_regex, pattern_type, optimization_hints, usage_count) VALUES ('{{$json.keyTerms.join('.*')}}', 'frequent', '{{JSON.stringify({cached: true, pattern: $json.pattern})}}', {{$json.totalFrequency}}) ON CONFLICT (pattern_regex) DO UPDATE SET usage_count = EXCLUDED.usage_count, optimization_hints = EXCLUDED.optimization_hints"
+        },
+        "id": "save-pattern",
+        "name": "Save Pattern to DB",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.2,
+        "position": [2050, 200],
+        "credentials": {
+          "postgres": {
+            "id": "{{POSTGRES_CREDENTIAL_ID}}"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO monitoring.workflow_executions (workflow_name, workflow_type, started_at, completed_at, status, metrics) VALUES ('query-pattern-optimizer', 'optimization', '{{$node[\"schedule-trigger\"].json.timestamp}}', NOW(), 'completed', '{{JSON.stringify({patternsAnalyzed: $node[\"analyze-patterns\"].json.length, patternsCached: $node[\"should-cache-check\"].json.filter(p => p.shouldCache).length})}}')"
+        },
+        "id": "log-execution",
+        "name": "Log Execution",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.2,
+        "position": [1050, 400],
+        "credentials": {
+          "postgres": {
+            "id": "{{POSTGRES_CREDENTIAL_ID}}"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Performance tuning based on metrics\nconst queries = $node[\"get-frequent-queries\"].json;\n\nif (!queries || queries.length === 0) {\n  return { status: 'no_data' };\n}\n\n// Calculate system metrics\nconst totalQueries = queries.reduce((sum, q) => sum + parseInt(q.frequency), 0);\nconst avgResponseTime = queries.reduce((sum, q) => sum + parseFloat(q.avg_time), 0) / queries.length;\n\n// Determine if we need to adjust caching strategy\nconst recommendations = [];\n\nif (avgResponseTime > 1000) {\n  recommendations.push({\n    type: 'performance',\n    action: 'increase_cache_ttl',\n    reason: 'High average response time detected'\n  });\n}\n\nif (totalQueries > 1000) {\n  recommendations.push({\n    type: 'scale',\n    action: 'add_redis_memory',\n    reason: 'High query volume detected'\n  });\n}\n\n// Check cache hit ratio\nconst cacheStats = await $node[\"get-cache-stats\"].json;\nif (cacheStats && cacheStats.hitRate < 0.3) {\n  recommendations.push({\n    type: 'optimization',\n    action: 'lower_cache_threshold',\n    reason: 'Low cache hit rate'\n  });\n}\n\nreturn {\n  metrics: {\n    totalQueries,\n    avgResponseTime,\n    uniquePatterns: queries.length\n  },\n  recommendations\n};"
+        },
+        "id": "performance-tuning",
+        "name": "Performance Tuning",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [850, 500]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(CASE WHEN cache_hit = true THEN 1 END)::float / COUNT(*) as hitRate FROM monitoring.query_logs WHERE created_at > NOW() - INTERVAL '1 hour'"
+        },
+        "id": "get-cache-stats",
+        "name": "Get Cache Stats",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.2,
+        "position": [650, 500],
+        "credentials": {
+          "postgres": {
+            "id": "{{POSTGRES_CREDENTIAL_ID}}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "schedule-trigger": {
+        "main": [
+          [
+            {
+              "node": "get-frequent-queries",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "get-cache-stats",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "get-frequent-queries": {
+        "main": [
+          [
+            {
+              "node": "analyze-patterns",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "analyze-patterns": {
+        "main": [
+          [
+            {
+              "node": "should-cache-check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "should-cache-check": {
+        "main": [
+          [
+            {
+              "node": "generate-embedding",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "log-execution",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "generate-embedding": {
+        "main": [
+          [
+            {
+              "node": "pre-fetch-results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "pre-fetch-results": {
+        "main": [
+          [
+            {
+              "node": "build-optimized-context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "build-optimized-context": {
+        "main": [
+          [
+            {
+              "node": "generate-cached-response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "generate-cached-response": {
+        "main": [
+          [
+            {
+              "node": "cache-pattern-response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "cache-pattern-response": {
+        "main": [
+          [
+            {
+              "node": "save-pattern",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "save-pattern": {
+        "main": [
+          [
+            {
+              "node": "should-cache-check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "get-cache-stats": {
+        "main": [
+          [
+            {
+              "node": "performance-tuning",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": {
+      "templateId": "query-pattern-optimizer",
+      "description": "Analyzes query patterns and pre-caches frequent queries for improved performance"
+    },
+    "versionId": "1.0.0"
+  }

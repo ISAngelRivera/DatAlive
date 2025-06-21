@@ -1,0 +1,21 @@
+[2025-06-21 15:32:48] [INFO] [0;35mStarting DataLive RAG System setup...[0m
+[2025-06-21 15:32:48] [INFO] Configuration file: /Users/angelrivera/Desktop/GIT/DatAlive/.env
+[2025-06-21 15:32:48] [INFO] Creating required directories...
+[2025-06-21 15:32:48] [INFO] [0;32m✓ Directories created[0m
+[2025-06-21 15:32:48] [INFO] Validating environment configuration...
+[2025-06-21 15:32:48] [WARN] [1;33mUsing default N8N password - please change it![0m
+[2025-06-21 15:32:48] [WARN] [1;33mUsing default Redis password - please change it![0m
+[2025-06-21 15:32:48] [WARN] [1;33mEnvironment validation completed with 2 warnings[0m
+[2025-06-21 15:32:48] [INFO] Checking Docker installation...
+[2025-06-21 15:32:48] [INFO] Docker version: 
+[2025-06-21 15:32:48] [INFO] [0;32m✓ Docker and Docker Compose are ready[0m
+[2025-06-21 15:32:48] [INFO] Checking and generating secrets...
+[2025-06-21 15:32:48] [INFO] Generated PostgreSQL password
+[2025-06-21 15:32:48] [INFO] Generated MinIO secret key
+[2025-06-21 15:32:48] [INFO] Generated N8N encryption key
+[2025-06-21 15:32:48] [INFO] Generated Grafana password
+[2025-06-21 15:32:48] [INFO] [0;32m✓ Generated 4 new secrets[0m
+[2025-06-21 15:32:48] [INFO] Configuring monitoring stack...
+[2025-06-21 15:32:48] [INFO] [0;32m✓ Monitoring configured[0m
+[2025-06-21 15:32:48] [INFO] [0;34mStarting Docker stack...[0m
+[2025-06-21 15:32:48] [INFO] Pulling latest Docker images...
