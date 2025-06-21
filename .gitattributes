@@ -1,0 +1,15 @@
+# Preserve execute permissions for shell scripts
+*.sh text eol=lf
+scripts/*.sh text eol=lf
+
+# Ensure consistent line endings
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+.env* text eol=lf
+Dockerfile* text eol=lf
+
+# Mark scripts as executable (Git 2.9.1+)
+scripts/*.sh filter=fix-perms
+*.sh filter=fix-perms
