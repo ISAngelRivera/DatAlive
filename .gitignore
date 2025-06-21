@@ -1,6 +1,5 @@
 # Environment variables
-.env.local
-.env.*.local
+.env
 
 # Secrets - NEVER commit these!
 secrets/
@@ -19,7 +18,7 @@ logs/
 
 # Backups
 backups/
-*.sql
+#*.sql
 *.dump
 *.tar.gz
 *.zip
@@ -62,9 +61,9 @@ n8n_data/
 minio_data/
 
 # Database dumps
-*.sql.gz
-postgres_data/
-qdrant_data/
+#*.sql.gz
+#postgres_data/
+#qdrant_data/
 
 # Model files (too large)
 ollama_models/
