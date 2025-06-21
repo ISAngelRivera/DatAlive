@@ -37,11 +37,14 @@ if [ -d "scripts" ]; then
     echo "   ✓ Scripts en scripts/*.sh"
 fi
 
-# 2. Script de git setup
-if [ -f "git-setup-and-push.sh" ]; then
-    chmod +x git-setup-and-push.sh
-    echo "   ✓ git-setup-and-push.sh"
-fi
+# 2. Asegurar que TODOS los scripts en esta carpeta sean ejecutables
+echo -e "\n${GREEN}Asegurando que todos los scripts sean ejecutables...${NC}"
+for script in "$SCRIPT_DIR"/*.sh; do
+    if [ -f "$script" ]; then
+        chmod +x "$script"
+        echo "   ✓ $(basename "$script")"
+    fi
+done
 
 # 3. Directorios con permisos correctos
 echo -e "\n${GREEN}2. Asegurando permisos de directorios...${NC}"
