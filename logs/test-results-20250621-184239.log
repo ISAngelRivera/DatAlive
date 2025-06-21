@@ -1,0 +1,79 @@
+[0;35m
+╔══════════════════════════════════════════════════════════════╗
+║          DataLive RAG System - Test Suite v1.0               ║
+╚══════════════════════════════════════════════════════════════╝
+[0m
+Started at: Sat Jun 21 18:42:39 CEST 2025
+Environment: production
+
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m1. DOCKER & CONTAINER STATUS[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36mChecking Docker...[0m
+  [0;32m✓[0m Docker daemon is running
+    Version: 28.1.1
+
+[0;36mChecking containers...[0m
+  [0;32m✓[0m datalive-n8n is running (Up About an hour (healthy))
+  [0;31m✗[0m datalive-postgres
+    [0;31mError: Container is not running[0m
+  [0;31m✗[0m datalive-redis
+    [0;31mError: Container is not running[0m
+  [0;32m✓[0m datalive-qdrant is running (Up About an hour (unhealthy))
+  [0;32m✓[0m datalive-minio is running (Up About an hour (healthy))
+  [0;32m✓[0m datalive-ollama is running (Up About an hour (unhealthy))
+  [0;32m✓[0m datalive-grafana is running (Up About an hour (healthy))
+  [0;32m✓[0m datalive-prometheus is running (Up About an hour (healthy))
+  [0;31m✗[0m datalive-loki
+    [0;31mError: Container is not running[0m
+  [0;32m✓[0m datalive-promtail is running (Up About an hour)
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m2. SERVICE HEALTH CHECKS[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mTesting PostgreSQL...[0m
+  [0;31m✗[0m PostgreSQL connection
+    [0;31mError: Cannot connect to database[0m
+
+[0;36mTesting Redis...[0m
+  [0;31m✗[0m Redis connection
+    [0;31mError: Cannot connect to Redis[0m
+
+[0;36mTesting MinIO...[0m
+  [0;32m✓[0m MinIO health check passed
+  [0;32m✓[0m MinIO Console accessible at http://localhost:9001
+
+[0;36mTesting Qdrant...[0m
+  [0;31m✗[0m Qdrant health
+    [0;31mError: Qdrant not responding[0m
+
+[0;36mTesting Ollama...[0m
+  [0;32m✓[0m Ollama API accessible
+  [0;32m✓[0m Phi model found in Ollama
+  [0;31m✗[0m Ollama generation
+    [0;31mError: Model not responding correctly[0m
+
+[0;36mTesting N8N...[0m
+  [0;32m✓[0m N8N health check passed
+  [0;32m✓[0m N8N appears to be configured
+
+[0;36mTesting Grafana...[0m
+  [0;32m✓[0m Grafana health check passed
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m3. INTEGRATION TESTS[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mTesting inter-container connectivity...[0m
+  [0;31m✗[0m N8N->PostgreSQL connectivity
+    [0;31mError: Cannot connect between containers[0m
+  [0;31m✗[0m N8N->Redis connectivity
+    [0;31mError: Cannot connect between containers[0m
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m4. RESOURCE USAGE[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mChecking resource consumption...[0m

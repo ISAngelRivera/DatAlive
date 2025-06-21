@@ -178,51 +178,82 @@ docker exec -it datalive-postgres psql -U datalive_user -d datalive_db
 - Funciona en CPU pero más lento
 - Para GPU: descomentar sección en docker-compose.yml
 
-## 📊 ESTADO DE COMPONENTES
+### 4. **N8N Auto-registro Fallando**
+- DB_POSTGRESDB_PASSWORD_FILE no funciona correctamente
+- Solución: Usar DB_POSTGRESDB_PASSWORD directamente en docker-compose.yml
+- Requiere registro manual en http://localhost:5678
+
+### 5. **Redis Authentication en N8N**
+- Agregar QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD} en environment de N8N
+
+### 6. **Servicios No Accesibles**
+- Agregar red 'frontend' a servicios que necesitan acceso externo
+- Verificar que no estén solo en redes 'internal'
+
+## 📊 ESTADO DE COMPONENTES (Actualizado: 2025-01-24)
 
 ### ✅ Completamente Funcional
-- PostgreSQL con esquema completo
-- MinIO con buckets configurados
-- Qdrant con colecciones
-- Redis para cache
-- Stack de monitoreo
+- Docker Stack completo levantado (10/10 contenedores)
+- Sistema RAG Core 100% operativo:
+  - Generación de embeddings: phi4-mini (3072 dims)
+  - Búsqueda vectorial: Qdrant con 2 colecciones
+  - Generación LLM: Respuestas en español funcionando
+  - Pipeline RAG: Búsqueda semántica con score 0.8598
+- MinIO operativo (consola en puerto 9001)
+- Redis con autenticación configurada (set/get OK)
+- Grafana accesible y funcional
+- N8N ejecutándose y configurado
 
 ### 🟡 Parcialmente Implementado
-- N8N workflows (faltan optimización y Teams)
-- Grafana dashboards (básicos, sin personalizar)
+- PostgreSQL: Conectividad OK pero sin schemas RAG inicializados (0/4)
+- Ollama: Funcional pero con timeouts ocasionales en tests simples
+- Conectividad inter-contenedor: N8N->PostgreSQL/Redis con problemas
+- Tests de salud: 75% éxito (25/33 pruebas pasadas)
+- Workflows N8N no importados aún
 
 ### ❌ No Implementado
+- Schemas PostgreSQL (rag, kag, cag, monitoring) - requiere init.sql
+- Auto-registro de N8N (requiere configuración manual)
+- Workflows de optimización (Agente 3)
+- Integración Google Drive OAuth
+- Tests automatizados del pipeline completo
 - Webhook de Microsoft Teams (postergado)
 - SharePoint/Confluence (postergado)
-- Tests automatizados
 - Backup automatizado
 
 ### 🆕 Añadido en esta sesión
 - **test-interface.html**: Interfaz web para probar queries sin Teams
 - **query-pattern-optimizer.json**: Workflow del Agente Optimizador completo
 - **setup-google-oauth.sh**: Script guiado para configurar Google OAuth
+- **Sistema de Testing en Contenedor**: Tests consistentes cross-platform
+- **Credenciales Estandarizadas**: admin/adminpassword para todos los servicios
 
 ## 🎯 PRÓXIMOS PASOS PRIORITARIOS
 
-1. **Integración Microsoft Teams**
-   - Crear app en Azure AD
-   - Configurar webhook entrante
-   - Workflow de respuesta
+### 1. **Inicializar Schemas PostgreSQL** (CRÍTICO)
+```bash
+# Ejecutar el script SQL que ya existe
+docker exec -i datalive-postgres psql -U admin -d datalive_db < postgres-init/init.sql
+```
 
-2. **Completar Agente Optimizador**
-   - Workflow de análisis de patterns
-   - Pre-caching inteligente
-   - Ajuste dinámico de parámetros
+### 2. **Completar Setup N8N**
+- Registro manual en http://localhost:5678
+- Importar workflows: `./scripts/sync-n8n-workflows.sh`
+- Configurar credenciales OAuth
 
-3. **Testing End-to-End**
-   - Subir documentos de prueba
-   - Ejecutar queries de prueba
-   - Validar respuestas
+### 3. **Resolver Conectividad Inter-contenedor**
+- Verificar configuración de redes en docker-compose.yml
+- Posiblemente ajustar hostnames en N8N
 
-4. **Dashboards Grafana**
-   - Dashboard de performance RAG
-   - Métricas de uso
-   - Alertas
+### 4. **Testing del Pipeline Completo**
+- Subir documentos de prueba a Google Drive
+- Ejecutar workflow de ingesta
+- Probar queries con test-interface.html
+
+### 5. **Optimización y Monitoreo**
+- Configurar dashboards Grafana
+- Activar workflow del Agente Optimizador
+- Establecer alertas
 
 ## 🔄 FLUJO DE TRABAJO ACTUAL
 

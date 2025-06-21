@@ -1,0 +1,132 @@
+[0;35m
+╔══════════════════════════════════════════════════════════════╗
+║          DataLive RAG System - Test Suite v1.0               ║
+╚══════════════════════════════════════════════════════════════╝
+[0m
+Started at: Sat Jun 21 18:59:38 CEST 2025
+Environment: production
+
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m1. DOCKER & CONTAINER STATUS[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36mChecking Docker...[0m
+  [0;32m✓[0m Docker daemon is running
+    Version: 28.1.1
+
+[0;36mChecking containers...[0m
+  [0;32m✓[0m datalive-n8n is running (Up 2 hours (healthy))
+  [0;32m✓[0m datalive-postgres is running (Up 2 hours (healthy))
+  [0;32m✓[0m datalive-redis is running (Up 2 hours (healthy))
+  [0;31m✗[0m datalive-qdrant
+    [0;31mError: Container is not running[0m
+  [0;32m✓[0m datalive-minio is running (Up 2 hours (healthy))
+  [0;32m✓[0m datalive-ollama is running (Up 11 minutes (unhealthy))
+  [0;32m✓[0m datalive-grafana is running (Up 2 hours (healthy))
+  [0;31m✗[0m datalive-prometheus
+    [0;31mError: Container is not running[0m
+  [0;32m✓[0m datalive-loki is running (Up 58 minutes (healthy))
+  [0;32m✓[0m datalive-promtail is running (Up 2 hours)
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m2. SERVICE HEALTH CHECKS[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mTesting PostgreSQL...[0m
+  [0;32m✓[0m PostgreSQL connection successful
+  [0;31m✗[0m PostgreSQL schemas
+    [0;31mError: Found only        0/4 required schemas[0m
+  [0;31m✗[0m PostgreSQL tables
+    [0;31mError: No tables found in schemas[0m
+
+[0;36mTesting Redis...[0m
+  [0;32m✓[0m Redis connection successful
+  [0;32m✓[0m Redis set/get operations working
+
+[0;36mTesting MinIO...[0m
+  [0;32m✓[0m MinIO health check passed
+  [0;32m✓[0m MinIO Console accessible at http://localhost:9001
+
+[0;36mTesting Qdrant...[0m
+  [0;32m✓[0m Qdrant health check passed
+  [0;32m✓[0m Found        3 Qdrant collections
+
+[0;36mTesting Ollama...[0m
+  [0;32m✓[0m Ollama API accessible
+  [0;32m✓[0m Phi model found in Ollama
+  [0;31m✗[0m Ollama generation
+    [0;31mError: Model not responding correctly[0m
+
+[0;36mTesting N8N...[0m
+  [0;32m✓[0m N8N health check passed
+  [0;32m✓[0m N8N appears to be configured
+
+[0;36mTesting Grafana...[0m
+  [0;32m✓[0m Grafana health check passed
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m3. INTEGRATION TESTS[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mTesting inter-container connectivity...[0m
+  [0;31m✗[0m N8N->PostgreSQL connectivity
+    [0;31mError: Cannot connect between containers[0m
+  [0;31m✗[0m N8N->Redis connectivity
+    [0;31mError: Cannot connect between containers[0m
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m4. RESOURCE USAGE[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mChecking resource consumption...[0m
+
+[1;33mContainer Resource Usage:[0m
+  
+
+[1;33mDisk Usage:[0m
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m5. CONFIGURATION VALIDATION[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mChecking critical configurations...[0m
+  [0;32m✓[0m .env file exists
+  [0;32m✓[0m Secret file exists: postgres_password.txt
+  [0;32m✓[0m Secret file exists: minio_secret_key.txt
+  [0;32m✓[0m Secret file exists: n8n_encryption_key.txt
+  [0;32m✓[0m Secret file exists: grafana_password.txt
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36m6. SYSTEM READINESS SUMMARY[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mComponent Readiness:[0m
+  • Docker Stack: [0;32m✓ Running[0m
+  • Database: [0;32m✓ Ready[0m
+  • Vector Store: [0;32m✓ Ready[0m
+  • LLM: [0;32m✓ Ready[0m
+  • Workflow Engine: [1;33m⚠ Requires Setup[0m
+  • Monitoring: [0;32m✓ Ready[0m
+
+[0;36mNext Steps:[0m
+  1. Complete N8N setup at http://localhost:5678
+  2. Configure Google OAuth using ./scripts/setup-google-oauth.sh
+  3. Import workflows using ./scripts/sync-n8n-workflows.sh
+  4. Test document ingestion with sample files
+  5. Verify RAG queries using test-interface.html
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;36mTEST RESULTS SUMMARY[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;36mTotal Tests:[0m 33
+[0;32mPassed:[0m 26
+[0;31mFailed:[0m 7
+[1;33mWarnings:[0m 0
+
+[0;36mSuccess Rate:[0m 78%
+
+[0;31m❌ SYSTEM HEALTH CHECK FAILED[0m
+
+Detailed log saved to: /Users/angelrivera/Desktop/GIT/DatAlive/logs/test-results-20250621-185938.log
+Completed at: Sat Jun 21 18:59:45 CEST 2025
