@@ -2,7 +2,7 @@
 # wait-for-healthy.sh - Espera a que todos los servicios estén saludables
 # Lee configuración desde .env
 
-set -euo pipefail
+set -eo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

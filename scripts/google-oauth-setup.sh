@@ -1,24 +1,37 @@
-#!/bin/bash
-# setup-google-oauth.sh - Guía interactiva para configurar Google OAuth
+#!/bin/sh
+# google-oauth-setup.sh - Guía interactiva para configurar Google OAuth
 # Este script ayuda a configurar las credenciales de Google Drive
+# Compatible con: bash 3.2+, sh, dash, zsh, Git Bash, WSL
 
-set -euo pipefail
+set -e
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Detectar directorio del script (ultra-compatible)
+if [ -n "$BASH_SOURCE" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
+elif [ -n "$0" ] && [ -f "$0" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+else
+    SCRIPT_DIR="$(pwd)"
+fi
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-clear
+# Cargar funciones universales
+. "$PROJECT_ROOT/scripts/lib/universal-functions.sh"
 
-echo -e "${CYAN}"
+# Verificar dependencias mínimas
+check_dependencies grep cut sed
+
+# Clear screen de manera compatible
+if command_exists clear; then
+    clear
+elif command_exists cls; then
+    cls
+else
+    printf "\033[2J\033[H"
+fi
+
+printf "%s\n" "$CYAN"
 cat << "EOF"
    ____                   _        ____    _         _   _     
   / ___| ___   ___   __ _| | ___  / __ \  / \  _   _| |_| |__  
@@ -27,119 +40,135 @@ cat << "EOF"
   \____|\___/ \___/ \__, |_|\___| \____/_/   \_\__,_|\__|_| |_|
                     |___/                                       
 EOF
-echo -e "${NC}"
+printf "%s\n" "$NC"
 
-echo -e "${BLUE}=== Configuración de Google OAuth para DataLive ===${NC}\n"
+printf "%s\n" "${BLUE}=== Configuración de Google OAuth para DataLive ===${NC}"
+printf "\n"
 
 # Check if .env exists
 if [ ! -f "$PROJECT_ROOT/.env" ]; then
-    echo -e "${RED}ERROR: No se encontró el archivo .env${NC}"
-    echo "Por favor, ejecuta primero: cp .env.template .env"
+    printf "%s\n" "${RED}ERROR: No se encontró el archivo .env${NC}"
+    printf "Por favor, ejecuta primero: cp .env.template .env\n"
     exit 1
 fi
 
-# Function to update .env
-update_env() {
-    local key=$1
-    local value=$2
-    
-    # Escape special characters for sed
-    value=$(echo "$value" | sed 's/[[\.*^$()+?{|]/\\&/g')
-    
-    # Update or add the key
-    if grep -q "^${key}=" "$PROJECT_ROOT/.env"; then
-        sed -i "s/^${key}=.*/${key}=${value}/" "$PROJECT_ROOT/.env"
-    else
-        echo "${key}=${value}" >> "$PROJECT_ROOT/.env"
-    fi
+printf "%s\n" "${YELLOW}Este script te guiará para configurar Google OAuth.${NC}"
+printf "%s\n" "${YELLOW}Necesitarás acceso a Google Cloud Console.${NC}"
+printf "\n"
+
+printf "%s\n" "${GREEN}Paso 1: Crear un proyecto en Google Cloud${NC}"
+printf "1. Ve a: https://console.cloud.google.com/\n"
+printf "2. Crea un nuevo proyecto o selecciona uno existente\n"
+printf "3. Anota el ID del proyecto\n"
+printf "\n"
+printf "Presiona ENTER cuando hayas completado este paso..."
+read dummy_input
+
+printf "\n%s\n" "${GREEN}Paso 2: Habilitar Google Drive API${NC}"
+printf "1. En el menú lateral, ve a 'APIs y servicios' > 'Biblioteca'\n"
+printf "2. Busca 'Google Drive API'\n"
+printf "3. Haz clic en ella y presiona 'HABILITAR'\n"
+printf "\n"
+printf "Presiona ENTER cuando hayas habilitado la API..."
+read dummy_input
+
+printf "\n%s\n" "${GREEN}Paso 3: Crear credenciales OAuth 2.0${NC}"
+printf "1. Ve a 'APIs y servicios' > 'Credenciales'\n"
+printf "2. Haz clic en '+ CREAR CREDENCIALES' > 'ID de cliente de OAuth'\n"
+printf "3. Si es la primera vez, configura la pantalla de consentimiento:\n"
+printf "   - Tipo de usuario: Interno (si es G Suite) o Externo\n"
+printf "   - Completa la información básica\n"
+printf "   - Añade los scopes:\n"
+printf "     • https://www.googleapis.com/auth/drive.readonly\n"
+printf "     • https://www.googleapis.com/auth/drive.metadata.readonly\n"
+printf "\n"
+printf "Presiona ENTER cuando hayas configurado la pantalla de consentimiento..."
+read dummy_input
+
+printf "\n%s\n" "${GREEN}Paso 4: Configurar el cliente OAuth${NC}"
+printf "1. Tipo de aplicación: 'Aplicación web'\n"
+printf "2. Nombre: 'DataLive RAG System' (o el que prefieras)\n"
+printf "3. URIs de redirección autorizadas, añade:\n"
+printf "   %s\n" "${CYAN}http://localhost:5678/rest/oauth2-credential/callback${NC}"
+printf "4. Haz clic en 'CREAR'\n"
+printf "\n"
+printf "Presiona ENTER cuando hayas creado las credenciales..."
+read dummy_input
+
+printf "\n%s\n" "${GREEN}Paso 5: Copiar las credenciales${NC}"
+printf "Ahora verás tu Client ID y Client Secret.\n"
+printf "\n"
+
+# Función para validar Client ID
+validate_client_id() {
+    local id="$1"
+    # Verificar que termine en .apps.googleusercontent.com y contenga números y guiones
+    case "$id" in
+        *[0-9]*-*apps.googleusercontent.com) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
-echo -e "${YELLOW}Este script te guiará para configurar Google OAuth.${NC}"
-echo -e "${YELLOW}Necesitarás acceso a Google Cloud Console.${NC}\n"
-
-echo -e "${GREEN}Paso 1: Crear un proyecto en Google Cloud${NC}"
-echo "1. Ve a: https://console.cloud.google.com/"
-echo "2. Crea un nuevo proyecto o selecciona uno existente"
-echo "3. Anota el ID del proyecto"
-echo ""
-read -p "Presiona ENTER cuando hayas completado este paso..."
-
-echo -e "\n${GREEN}Paso 2: Habilitar Google Drive API${NC}"
-echo "1. En el menú lateral, ve a 'APIs y servicios' > 'Biblioteca'"
-echo "2. Busca 'Google Drive API'"
-echo "3. Haz clic en ella y presiona 'HABILITAR'"
-echo ""
-read -p "Presiona ENTER cuando hayas habilitado la API..."
-
-echo -e "\n${GREEN}Paso 3: Crear credenciales OAuth 2.0${NC}"
-echo "1. Ve a 'APIs y servicios' > 'Credenciales'"
-echo "2. Haz clic en '+ CREAR CREDENCIALES' > 'ID de cliente de OAuth'"
-echo "3. Si es la primera vez, configura la pantalla de consentimiento:"
-echo "   - Tipo de usuario: Interno (si es G Suite) o Externo"
-echo "   - Completa la información básica"
-echo "   - Añade los scopes:"
-echo "     • https://www.googleapis.com/auth/drive.readonly"
-echo "     • https://www.googleapis.com/auth/drive.metadata.readonly"
-echo ""
-read -p "Presiona ENTER cuando hayas configurado la pantalla de consentimiento..."
-
-echo -e "\n${GREEN}Paso 4: Configurar el cliente OAuth${NC}"
-echo "1. Tipo de aplicación: 'Aplicación web'"
-echo "2. Nombre: 'DataLive RAG System' (o el que prefieras)"
-echo "3. URIs de redirección autorizadas, añade:"
-echo -e "   ${CYAN}http://localhost:5678/rest/oauth2-credential/callback${NC}"
-echo "4. Haz clic en 'CREAR'"
-echo ""
-read -p "Presiona ENTER cuando hayas creado las credenciales..."
-
-echo -e "\n${GREEN}Paso 5: Copiar las credenciales${NC}"
-echo "Ahora verás tu Client ID y Client Secret."
-echo ""
-
-# Read Client ID
+# Read Client ID con validación compatible
 while true; do
-    read -p "$(echo -e ${CYAN})Pega aquí tu Client ID: $(echo -e ${NC})" client_id
-    if [[ $client_id =~ ^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$ ]]; then
+    printf "%s" "${CYAN}Pega aquí tu Client ID: ${NC}"
+    read client_id
+    client_id="$(trim "$client_id")"
+    
+    if [ -n "$client_id" ] && validate_client_id "$client_id"; then
         break
     else
-        echo -e "${RED}El Client ID no parece válido. Debería terminar en .apps.googleusercontent.com${NC}"
+        printf "%s\n" "${RED}El Client ID no parece válido. Debería terminar en .apps.googleusercontent.com${NC}"
     fi
 done
 
-# Read Client Secret
+# Read Client Secret con validación básica
 while true; do
-    read -p "$(echo -e ${CYAN})Pega aquí tu Client Secret: $(echo -e ${NC})" client_secret
-    if [[ -n $client_secret ]]; then
+    printf "%s" "${CYAN}Pega aquí tu Client Secret: ${NC}"
+    read client_secret
+    client_secret="$(trim "$client_secret")"
+    
+    if [ -n "$client_secret" ]; then
         break
     else
-        echo -e "${RED}El Client Secret no puede estar vacío${NC}"
+        printf "%s\n" "${RED}El Client Secret no puede estar vacío${NC}"
     fi
 done
 
-echo -e "\n${BLUE}Actualizando archivo .env...${NC}"
+printf "\n%s\n" "${BLUE}Actualizando archivo .env...${NC}"
 update_env "GOOGLE_CLIENT_ID" "$client_id"
 update_env "GOOGLE_CLIENT_SECRET" "$client_secret"
 
 # Optional: Configure folders to sync
-echo -e "\n${GREEN}Paso 6: Configurar carpetas de Google Drive (opcional)${NC}"
-echo "Para sincronizar carpetas específicas, necesitas sus IDs."
-echo "Para obtener el ID de una carpeta:"
-echo "1. Abre la carpeta en Google Drive"
-echo "2. La URL será algo como: https://drive.google.com/drive/folders/[FOLDER_ID]"
-echo "3. Copia el FOLDER_ID"
-echo ""
+printf "\n%s\n" "${GREEN}Paso 6: Configurar carpetas de Google Drive (opcional)${NC}"
+printf "Para sincronizar carpetas específicas, necesitas sus IDs.\n"
+printf "Para obtener el ID de una carpeta:\n"
+printf "1. Abre la carpeta en Google Drive\n"
+printf "2. La URL será algo como: https://drive.google.com/drive/folders/[FOLDER_ID]\n"
+printf "3. Copia el FOLDER_ID\n"
+printf "\n"
 
-read -p "¿Quieres configurar carpetas específicas? (s/N): " configure_folders
-if [[ $configure_folders =~ ^[Ss]$ ]]; then
-    read -p "IDs de carpetas (separados por comas): " folder_ids
-    update_env "GOOGLE_DRIVE_FOLDERS" "$folder_ids"
-fi
+printf "¿Quieres configurar carpetas específicas? (s/N): "
+read configure_folders
+
+# Verificar respuesta de manera compatible
+case "$configure_folders" in
+    [Ss]|[Ss][Ii]|[Yy]|[Yy][Ee][Ss])
+        printf "IDs de carpetas (separados por comas): "
+        read folder_ids
+        folder_ids="$(trim "$folder_ids")"
+        if [ -n "$folder_ids" ]; then
+            update_env "GOOGLE_DRIVE_FOLDERS" "$folder_ids"
+        fi
+        ;;
+esac
 
 # Create OAuth file if needed
-echo -e "\n${BLUE}Creando archivo de configuración OAuth...${NC}"
-mkdir -p "$PROJECT_ROOT/resources/crdtls"
+printf "\n%s\n" "${BLUE}Creando archivo de configuración OAuth...${NC}"
+ensure_dir "$PROJECT_ROOT/resources/crdtls"
 
-cat > "$PROJECT_ROOT/resources/crdtls/OauthGoogle.json" <<EOF
+# Crear archivo JSON de manera compatible (evitar here-documents complejos)
+cat > "$PROJECT_ROOT/resources/crdtls/OauthGoogle.json" << EOF
 {
   "web": {
     "client_id": "${client_id}",
@@ -157,25 +186,27 @@ EOF
 
 update_env "GOOGLE_OAUTH_FILE" "./resources/crdtls/OauthGoogle.json"
 
-echo -e "\n${GREEN}✅ Configuración guardada exitosamente!${NC}"
+printf "\n%s\n" "${GREEN}✅ Configuración guardada exitosamente!${NC}"
 
-echo -e "\n${YELLOW}Próximos pasos:${NC}"
-echo "1. Reinicia los servicios: docker restart datalive-n8n"
-echo "2. Accede a N8N: http://localhost:5678"
-echo "3. Ve a Credentials > Google Drive"
-echo "4. Haz clic en 'Connect' y autoriza el acceso"
-echo ""
+printf "\n%s\n" "${YELLOW}Próximos pasos:${NC}"
+printf "1. Reinicia los servicios: docker restart datalive-n8n\n"
+printf "2. Accede a N8N: http://localhost:5678\n"
+printf "3. Ve a Credentials > Google Drive\n"
+printf "4. Haz clic en 'Connect' y autoriza el acceso\n"
+printf "\n"
 
-echo -e "${BLUE}Configuración guardada en:${NC}"
-echo "- Client ID: ${client_id:0:20}..."
-echo "- Archivo OAuth: $PROJECT_ROOT/resources/crdtls/OauthGoogle.json"
-echo "- Variables actualizadas en .env"
+printf "%s\n" "${BLUE}Configuración guardada en:${NC}"
+# Mostrar solo primeros 20 caracteres del client_id de manera compatible
+client_id_preview="$(echo "$client_id" | cut -c1-20)"
+printf "- Client ID: %s...\n" "$client_id_preview"
+printf "- Archivo OAuth: %s/resources/crdtls/OauthGoogle.json\n" "$PROJECT_ROOT"
+printf "- Variables actualizadas en .env\n"
 
-echo -e "\n${GREEN}¡Listo! Las credenciales de Google OAuth están configuradas.${NC}"
+printf "\n%s\n" "${GREEN}¡Listo! Las credenciales de Google OAuth están configuradas.${NC}"
 
-# Test if N8N is running
-if curl -sf "http://localhost:5678/healthz" > /dev/null 2>&1; then
-    echo -e "\n${CYAN}N8N está ejecutándose. Puedes proceder con la autorización.${NC}"
+# Test if N8N is running usando funciones universales
+if wait_for_service "http://localhost:5678/healthz" 1; then
+    printf "\n%s\n" "${CYAN}N8N está ejecutándose. Puedes proceder con la autorización.${NC}"
 else
-    echo -e "\n${YELLOW}N8N no está ejecutándose. Inicia los servicios primero.${NC}"
+    printf "\n%s\n" "${YELLOW}N8N no está ejecutándose. Inicia los servicios primero.${NC}"
 fi

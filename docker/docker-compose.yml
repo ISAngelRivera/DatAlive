@@ -14,7 +14,9 @@ x-healthcheck-defaults: &healthcheck-defaults
 services:
   # 1. Orquestador Principal - N8N
   n8n:
-    image: n8nio/n8n:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.n8n
     container_name: datalive-n8n
     restart: unless-stopped
     user: "1000:1000"

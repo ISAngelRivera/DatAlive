@@ -1,0 +1,165 @@
+{
+  "name": "DataLive Health Check",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# DataLive Health Check\n\nThis workflow monitors the health of all DataLive services:\n\n- ✅ PostgreSQL Database\n- ✅ Redis Cache  \n- ✅ Qdrant Vector Store\n- ✅ Ollama LLM\n- ✅ MinIO Storage\n\nRuns every 5 minutes to ensure system availability.",
+        "height": 464,
+        "width": 468
+      },
+      "id": "1a7b8c9d-0e1f-2a3b-4c5d-6e7f8a9b0c1d",
+      "name": "Health Check Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        240,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "2b8c9d0e-1f2a-3b4c-5d6e-7f8a9b0c1d2e",
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        760,
+        240
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "url": "http://postgres:5432",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "3c9d0e1f-2a3b-4c5d-6e7f-8a9b0c1d2e3f",
+      "name": "Check PostgreSQL",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        980,
+        140
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "http://redis:6379",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "4d0e1f2a-3b4c-5d6e-7f8a-9b0c1d2e3f4a",
+      "name": "Check Redis",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        980,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "http://qdrant:6333/",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "5e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+      "name": "Check Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        980,
+        340
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "http://ollama:11434/api/tags",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "6f2a3b4c-5d6e-7f8a-9b0c-1d2e3f4a5b6c",
+      "name": "Check Ollama",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        980,
+        440
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "http://minio:9000/minio/health/ready",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "7a3b4c5d-6e7f-8a9b-0c1d-2e3f4a5b6c7d",
+      "name": "Check MinIO",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        980,
+        540
+      ],
+      "typeVersion": 4.2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "Check PostgreSQL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Redis", 
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Qdrant",
+            "type": "main", 
+            "index": 0
+          },
+          {
+            "node": "Check Ollama",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check MinIO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "datalive"
+  },
+  "id": "1",
+  "tags": ["health", "monitoring", "system"]
+}

@@ -1,1 +1,13 @@
-{"web":{"client_id":"661039197957-qrd2b9q7nsov15tekg9e0lptglb7rqqi.apps.googleusercontent.com","project_id":"ecoland-285010","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"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"}}
+{
+  "web": {
+    "client_id": "368774625602-gofm8v8u7jan1duea971t5jo4g2alu0s.apps.googleusercontent.com",
+    "project_id": "datalive",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": "GGOCSPX-mVRnA15R5O_anVe4zDCdLo2NQSI5",
+    "redirect_uris": [
+      "http://localhost:5678/rest/oauth2-credential/callback"
+    ]
+  }
+}

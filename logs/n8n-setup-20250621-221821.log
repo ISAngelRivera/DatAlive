@@ -1,0 +1,52 @@
+[22:18:21] [INFO] [0;34mStarting comprehensive N8N setup...[0m
+[22:18:21] [INFO] Project root: /Users/angelrivera/Desktop/GIT/DatAlive
+[22:18:21] [INFO] N8N URL: http://localhost:5678
+[22:18:21] [INFO] Target user: contacto@angelrivera.es
+[22:18:21] [INFO] [1;33mWaiting for N8N to be ready at http://localhost:5678...[0m
+[22:18:21] [INFO] [0;32m✓ N8N is ready and accessible[0m
+[22:18:21] [INFO] Analyzing N8N current state...
+[22:18:21] [INFO] Database state: Users=1, Workflows=0, Credentials=1
+[22:18:21] [INFO] [0;32m✓ N8N has users - attempting login[0m
+[22:18:21] [INFO] [0;36mLogging in to N8N as contacto@angelrivera.es[0m
+[22:18:21] [INFO] [0;32m✓ Login successful with session cookie[0m
+[22:18:21] [INFO] [0;32m✓ Login verified - credentials access confirmed[0m
+[22:18:21] [INFO] [0;36mConfiguring N8N settings...[0m
+[22:18:21] [WARN] [1;33m⚠ Could not configure some settings[0m
+[22:18:21] [INFO] [0;36mSetting up N8N credentials...[0m
+[22:18:21] [INFO] Setting up Ollama credential...
+[22:18:21] [INFO] [0;36mCreating credential: DataLive Ollama[0m
+[22:18:21] [INFO] [0;32m✓ Created credential 'DataLive Ollama' (ID: c5KypaXOrFyd2ErJ)[0m
+[22:18:21] [INFO] Setting up Qdrant credential...
+[22:18:21] [INFO] [0;36mCreating credential: DataLive Qdrant[0m
+[22:18:21] [INFO] [0;32m✓ Created credential 'DataLive Qdrant' (ID: kfqmkKF0lmNlArOW)[0m
+[22:18:21] [INFO] Setting up PostgreSQL credential...
+[22:18:21] [INFO] [0;36mCreating credential: DataLive PostgreSQL[0m
+[22:18:21] [INFO] [0;32m✓ Created credential 'DataLive PostgreSQL' (ID: EUGqZwxkRz6NhMDh)[0m
+[22:18:21] [INFO] Setting up MinIO credential...
+[22:18:21] [INFO] [0;36mCreating credential: DataLive MinIO[0m
+[22:18:21] [INFO] [0;32m✓ Created credential 'DataLive MinIO' (ID: AQWd3Wk4tJ2mBKIK)[0m
+[22:18:21] [INFO] Setting up Redis credential...
+[22:18:21] [INFO] [0;36mCreating credential: DataLive Redis[0m
+[22:18:21] [INFO] [0;32m✓ Created credential 'DataLive Redis' (ID: YHAT4hu8fcqGuKMo)[0m
+[22:18:21] [INFO] Setting up Google Drive OAuth credential...
+[22:18:21] [INFO] [0;36mCreating credential: DataLive Google Drive[0m
+[22:18:21] [INFO] [0;32m✓ Created credential 'DataLive Google Drive' (ID: tNp93Mzul9cTwjYx)[0m
+[22:18:21] [WARN] [1;33m⚠ Google Drive credential created but requires manual OAuth authorization[0m
+[22:18:21] [INFO] Complete authorization at: http://localhost:5678/credentials/[22:18:21] [INFO] [0;36mCreating credential: DataLive Google Drive[0m
+[22:18:21] [INFO] [0;32m✓ Created credential 'DataLive Google Drive' (ID: tNp93Mzul9cTwjYx)[0m
+tNp93Mzul9cTwjYx
+[22:18:21] [INFO] [0;32m✓ Credentials setup completed (0 created/verified)[0m
+[22:18:21] [INFO] [0;36mImporting N8N workflows...[0m
+[22:18:21] [INFO] Processing workflow: git-repository-ingestion.json
+[22:18:21] [INFO] Processing workflow: document-sync-deletion.json
+[22:18:21] [INFO] Processing workflow: query-pattern-optimizer.json
+[22:18:22] [INFO] Processing workflow: simple-rag-query.json
+[22:18:22] [INFO] [0;32m✓ Created workflow 'Simple RAG Query' (ID: hAji9HasMZDhzAww)[0m
+[22:18:22] [WARN] [1;33m⚠ Could not activate workflow 'Simple RAG Query'[0m
+[22:18:22] [INFO] Processing workflow: health-check.json
+[22:18:22] [INFO] [0;32m✓ Created workflow 'DataLive Health Check' (ID: 3VovVCvU49yhXDjV)[0m
+[22:18:22] [WARN] [1;33m⚠ Could not activate workflow 'DataLive Health Check'[0m
+[22:18:22] [INFO] Processing workflow: rag-query-router.json
+[22:18:22] [INFO] [0;32m✓ Workflow import completed (2 processed)[0m
+[22:18:22] [INFO] Setup summary saved to: /Users/angelrivera/Desktop/GIT/DatAlive/config/n8n/setup-summary.txt
+[22:18:22] [INFO] [0;32m✅ N8N setup completed successfully![0m

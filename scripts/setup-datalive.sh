@@ -228,9 +228,9 @@ start_docker_stack() {
     log "INFO" "Pulling latest Docker images..."
     docker-compose -f docker/docker-compose.yml pull
     
-    # Start services
+    # Start services with environment file
     log "INFO" "Starting services..."
-    docker-compose -f docker/docker-compose.yml up -d
+    docker-compose -f docker/docker-compose.yml --env-file .env up -d
     
     # Wait for services to be healthy
     if [ "$SKIP_HEALTH_CHECKS" != "true" ]; then
@@ -245,17 +245,25 @@ start_docker_stack() {
 initialize_services() {
     log "INFO" "${BLUE}Initializing services...${NC}"
     
-    # Initialize Ollama models
-    log "INFO" "${CYAN}[1/4] Initializing Ollama models...${NC}"
-    if "${SCRIPT_DIR}/init-ollama-models.sh"; then
-        log "INFO" "${GREEN}✓ Ollama models initialized${NC}"
+    # Initialize PostgreSQL schemas first (required for N8N)
+    log "INFO" "${CYAN}[1/5] Initializing PostgreSQL schemas...${NC}"
+    if docker exec datalive-postgres psql -U admin -d datalive_db -f /docker-entrypoint-initdb.d/init.sql > /dev/null 2>&1; then
+        log "INFO" "${GREEN}✓ PostgreSQL schemas initialized${NC}"
     else
-        log "ERROR" "${RED}Failed to initialize Ollama models${NC}"
+        log "WARN" "${YELLOW}PostgreSQL schemas may already exist${NC}"
+    fi
+    
+    # Initialize N8N (early, needs database)
+    log "INFO" "${CYAN}[2/5] Initializing N8N...${NC}"
+    if "${SCRIPT_DIR}/init-n8n-setup.sh"; then
+        log "INFO" "${GREEN}✓ N8N initialized with user, credentials, and workflows${NC}"
+    else
+        log "ERROR" "${RED}Failed to initialize N8N${NC}"
         return 1
     fi
     
     # Initialize MinIO buckets
-    log "INFO" "${CYAN}[2/4] Initializing MinIO buckets...${NC}"
+    log "INFO" "${CYAN}[3/5] Initializing MinIO buckets...${NC}"
     if "${SCRIPT_DIR}/init-minio-buckets.sh"; then
         log "INFO" "${GREEN}✓ MinIO buckets initialized${NC}"
     else
@@ -263,17 +271,17 @@ initialize_services() {
         return 1
     fi
     
-    # Initialize N8N
-    log "INFO" "${CYAN}[3/4] Initializing N8N...${NC}"
-    if "${SCRIPT_DIR}/init-n8n-setup.sh"; then
-        log "INFO" "${GREEN}✓ N8N initialized${NC}"
+    # Initialize Ollama models
+    log "INFO" "${CYAN}[4/5] Initializing Ollama models...${NC}"
+    if "${SCRIPT_DIR}/init-ollama-models.sh"; then
+        log "INFO" "${GREEN}✓ Ollama models initialized${NC}"
     else
-        log "ERROR" "${RED}Failed to initialize N8N${NC}"
+        log "ERROR" "${RED}Failed to initialize Ollama models${NC}"
         return 1
     fi
     
     # Initialize Qdrant collections
-    log "INFO" "${CYAN}[4/4] Initializing Qdrant collections...${NC}"
+    log "INFO" "${CYAN}[5/5] Initializing Qdrant collections...${NC}"
     if "${SCRIPT_DIR}/init-qdrant-collections.sh"; then
         log "INFO" "${GREEN}✓ Qdrant collections initialized${NC}"
     else
