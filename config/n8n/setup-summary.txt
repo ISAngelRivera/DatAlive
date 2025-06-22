@@ -1,11 +1,11 @@
 DataLive N8N Setup Summary
 ==========================
-Date: Sat Jun 21 21:41:39 UTC 2025
+Date: Sun Jun 22 10:15:44 UTC 2025
 Setup Duration: 1 seconds
 
 N8N Configuration:
 - URL: http://localhost:5678
-- User Email: admin@datalive.local
+- User Email: angeldasound@gmail.com
 - User Existed: true
 
 Results:
@@ -13,13 +13,24 @@ Results:
 - Workflows Imported/Updated: 0
 
 Credential IDs:
-None created
+OLLAMA_CREDENTIAL_ID=[2025-06-22 10:15:44] [INFO] ⚠ Credential 'DataLive Ollama' already exists (ID: rY8BjfV5iAFISLqI)
+rY8BjfV5iAFISLqI
+QDRANT_CREDENTIAL_ID=[2025-06-22 10:15:44] [INFO] ⚠ Credential 'DataLive Qdrant' already exists (ID: Ghs89D7ZucWtOd8R)
+Ghs89D7ZucWtOd8R
+POSTGRES_CREDENTIAL_ID=[2025-06-22 10:15:44] [INFO] ⚠ Credential 'DataLive PostgreSQL' already exists (ID: ETwB0bUOdr5p8faD)
+ETwB0bUOdr5p8faD
+MINIO_CREDENTIAL_ID=[2025-06-22 10:15:44] [INFO] ⚠ Credential 'DataLive MinIO' already exists (ID: HDDBmJW8YKfDprD2)
+HDDBmJW8YKfDprD2
+REDIS_CREDENTIAL_ID=[2025-06-22 10:15:44] [INFO] ⚠ Credential 'DataLive Redis' already exists (ID: NtXL5SexSdXnikqY)
+NtXL5SexSdXnikqY
+GDRIVE_CREDENTIAL_ID=[2025-06-22 10:15:44] [INFO] ⚠ Credential 'DataLive Google Drive' already exists (ID: vSub3UDZP7oAOvfQ)
+vSub3UDZP7oAOvfQ
 
 Next Steps:
 1. Access N8N at: http://localhost:5678
-2. Login with: admin@datalive.local
+2. Login with: angeldasound@gmail.com
 3. If using Google Drive, complete OAuth authorization
 4. Verify all workflows are active and working
 5. Test the system with sample documents
 
-Log File: /Users/angelrivera/Desktop/GIT/DatAlive/logs/n8n-setup-20250621-214138.log
+Log File: /Users/angelrivera/Desktop/GIT/DatAlive/logs/n8n-setup-20250622-101543.log

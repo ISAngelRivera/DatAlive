@@ -576,6 +576,32 @@ import_workflows() {
     log "INFO" "${GREEN}✓ Workflow import completed (${WORKFLOWS_IMPORTED} processed)${NC}"
 }
 
+# Ensure setup is marked as complete
+ensure_setup_complete() {
+    log "INFO" "${CYAN}Ensuring N8N setup is marked as complete...${NC}"
+    
+    # Mark setup as complete in database
+    docker exec datalive-postgres psql -U admin -d datalive_db -c "
+    INSERT INTO settings (key, value, \"loadOnStartup\") 
+    VALUES ('userManagement.isInstanceOwnerSetUp', 'true', true)
+    ON CONFLICT (key) DO UPDATE SET value = 'true';" > /dev/null 2>&1
+    
+    # Also ensure user management is properly set
+    docker exec datalive-postgres psql -U admin -d datalive_db -c "
+    INSERT INTO settings (key, value, \"loadOnStartup\") 
+    VALUES ('userManagement.skipInstanceOwnerSetup', 'false', false)
+    ON CONFLICT (key) DO UPDATE SET value = 'false';" > /dev/null 2>&1
+    
+    # Verify it was set
+    local setup_status=$(docker exec datalive-postgres psql -U admin -d datalive_db -t -c "SELECT value FROM settings WHERE key = 'userManagement.isInstanceOwnerSetUp';" 2>/dev/null | tr -d ' ')
+    
+    if [ "$setup_status" = "true" ]; then
+        log "INFO" "${GREEN}✓ Setup marked as complete${NC}"
+    else
+        log "WARN" "${YELLOW}⚠ Could not verify setup completion${NC}"
+    fi
+}
+
 # Configure N8N settings for optimal operation
 configure_n8n_settings() {
     log "INFO" "${CYAN}Configuring N8N settings...${NC}"
@@ -687,6 +713,9 @@ main() {
     
     # Step 3: Configure settings
     configure_n8n_settings
+    
+    # Step 3.5: Ensure setup is marked as complete
+    ensure_setup_complete
     
     # Step 4: Setup credentials (idempotent)
     print_header "Setting Up Credentials"
