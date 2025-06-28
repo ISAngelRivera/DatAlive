@@ -264,11 +264,20 @@ initialize_services() {
         return 1
     fi
     
-    # Then initialize credentials and other setup
+    # Then initialize N8N complete setup
     if "${SCRIPT_DIR}/init-n8n-setup.sh"; then
-        log "INFO" "${GREEN}✓ N8N initialized with credentials${NC}"
+        log "INFO" "${GREEN}✓ N8N basic setup completed${NC}"
     else
         log "ERROR" "${RED}Failed to initialize N8N${NC}"
+        return 1
+    fi
+    
+    # Create all N8N credentials (comprehensive)
+    log "INFO" "${CYAN}Creating N8N credentials (complete set)...${NC}"
+    if "${SCRIPT_DIR}/create-n8n-credentials.sh"; then
+        log "INFO" "${GREEN}✓ N8N credentials created (7 complete set)${NC}"
+    else
+        log "ERROR" "${RED}Failed to create N8N credentials${NC}"
         return 1
     fi
     

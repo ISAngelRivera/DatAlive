@@ -1,0 +1,30 @@
+# Unified Agent Configuration
+app:
+  name: "DataLive Unified Agent"
+  version: "3.0.0"
+  host: "0.0.0.0"
+  port: 8058
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+metrics:
+  enabled: true
+  port: 9091
+  path: "/metrics"
+
+rag:
+  chunk_size: 1000
+  chunk_overlap: 200
+  similarity_threshold: 0.7
+  max_results: 10
+
+kag:
+  temporal_window: 30
+  entity_extraction: true
+  relationship_scoring: true
+
+cag:
+  cache_ttl: 3600
+  max_cache_size: 10000

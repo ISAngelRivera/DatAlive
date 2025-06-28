@@ -1,0 +1,29 @@
+# Core dependencies
+asyncpg==0.30.0
+fastapi==0.115.13
+pydantic>=2.7.0
+pydantic-ai>=0.0.4
+uvicorn[standard]
+httpx
+
+# AI/ML dependencies
+openai
+anthropic
+
+# Knowledge Graph dependencies
+neo4j>=5.20.0
+graphiti-core>=0.10.0
+
+# Database dependencies
+sqlalchemy>=2.0.0
+
+# Utilities
+python-dotenv
+click
+colorama
+rich
+typing-extensions
+
+# Development
+pytest
+pytest-asyncio

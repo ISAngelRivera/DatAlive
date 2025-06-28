@@ -24,25 +24,20 @@ services:
     environment:
       <<: *common-variables
       N8N_METRICS: true
-      N8N_METRICS_INCLUDE_DEFAULT_METRICS: true
       N8N_RUNNERS_ENABLED: true
-      N8N_SECURE_COOKIE: true
+      N8N_SECURE_COOKIE: false
       N8N_LOG_LEVEL: info
       N8N_VERSION_NOTIFICATIONS_ENABLED: false
       N8N_TEMPLATES_ENABLED: true
       N8N_PERSONALIZATION_ENABLED: false
       N8N_ENCRYPTION_KEY_FILE: /run/secrets/n8n_encryption_key
-      N8N_WEBHOOK_URL: https://n8n.datalive.local
-      N8N_BASIC_AUTH_ACTIVE: true
-      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
-      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-adminpassword}
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_PORT: 5432
       DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
       DB_POSTGRESDB_USER: ${POSTGRES_USER}
       DB_POSTGRESDB_PASSWORD: adminpassword
-      EXECUTIONS_MODE: regular
+      EXECUTIONS_MODE: queue
       QUEUE_BULL_REDIS_HOST: redis
       QUEUE_BULL_REDIS_PORT: 6379
       QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -60,9 +55,7 @@ services:
       redis:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
-      neo4j:
-        condition: service_healthy
+        condition: service_started
     secrets:
       - postgres_password
       - n8n_encryption_key
@@ -80,7 +73,7 @@ services:
 
   # 2. Base de Datos Principal
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: datalive-postgres
     restart: unless-stopped
     user: "999:999"
@@ -162,7 +155,7 @@ services:
       - frontend
     healthcheck:
       <<: *healthcheck-defaults
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/"]
     deploy:
       resources:
         limits:
@@ -183,14 +176,12 @@ services:
     environment:
       <<: *common-variables
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-adminpassword}
-      NEO4J_PLUGINS: '["graph-data-science", "apoc", "n10s", "neosemantics"]'
-      NEO4J_dbms_memory_heap_initial__size: 4G
-      NEO4J_dbms_memory_heap_max__size: 8G
-      NEO4J_dbms_memory_pagecache_size: 4G
+      NEO4J_PLUGINS: '["graph-data-science", "apoc"]'
+      NEO4J_dbms_memory_heap_initial__size: 1G
+      NEO4J_dbms_memory_heap_max__size: 2G
+      NEO4J_dbms_memory_pagecache_size: 1G
       NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
-      NEO4J_dbms_security_procedures_unrestricted: "apoc.*,gds.*,n10s.*"
-      NEO4J_dbms_unmanaged_extension_classes: "n10s.endpoint=/rdf"
-      NEO4J_dbms_connector_bolt_advertised_address: "localhost:7687"
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*,gds.*"
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
@@ -375,7 +366,7 @@ services:
       <<: *common-variables
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_password
-      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,neo4j-datasource
+      GF_INSTALL_PLUGINS: ""
       GF_USERS_ALLOW_SIGN_UP: false
       GF_ANALYTICS_REPORTING_ENABLED: false
     volumes:
@@ -450,6 +441,7 @@ services:
       - postgres_password
     depends_on:
       - postgres
+
 
 # Volúmenes
 volumes:

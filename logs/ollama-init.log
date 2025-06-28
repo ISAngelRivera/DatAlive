@@ -1,0 +1,6 @@
+[2025-06-28 17:39:59] [INFO] [0;34mStarting Ollama model initialization[0m
+[2025-06-28 17:39:59] [INFO] Models to install: phi-4:latest phi-4:mini nomic-embed-text:v1.5 nomic-embed-text:latest mxbai-embed-large llava:latest
+[2025-06-28 17:39:59] [INFO] Checking Ollama service at http://localhost:11434...
+[2025-06-28 17:39:59] [INFO] [0;32mOllama is ready![0m
+[2025-06-28 17:39:59] [INFO] Currently installed models:  
+[2025-06-28 17:39:59] [INFO] Pulling model: [0;34mphi-4:latest[0m
