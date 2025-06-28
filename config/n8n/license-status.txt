@@ -1,5 +1,0 @@
-Last check: Sat Jun 28 17:38:27 CEST 2025
-License key: 627897a7-4f19-4f94-b815-b369e43c1452
-Response: {"data":{"usage":{"activeWorkflowTriggers":{"value":0,"limit":-1,"warningThreshold":0.8},"workflowsHavingEvaluations":{"value":0,"limit":0}},"license":{"planId":"","planName":"Community"}}}
-Status: INACTIVE
-Activation: UNKNOWN - {"code":400,"message":"Activation key not found"}
