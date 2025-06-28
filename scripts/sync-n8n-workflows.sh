@@ -96,8 +96,14 @@ sync_workflow() {
         return 1
     fi
     
-    # Read workflow content
-    local workflow_data=$(cat "${workflow_file}")
+    # Read and clean workflow content
+    local workflow_data=$(jq '{
+        name: .name,
+        nodes: .nodes,
+        connections: .connections,
+        settings: {},
+        staticData: (.staticData // {})
+    }' "${workflow_file}")
     
     # Extract workflow name from JSON
     local name_in_file=$(echo "${workflow_data}" | jq -r '.name // empty')
@@ -132,15 +138,28 @@ sync_workflow() {
         # Create new workflow
         log "INFO" "Creating new workflow ${workflow_name}"
         
-        local response=$(curl -sf -X POST \
+        local response=$(curl -s -X POST \
             -H "X-N8N-API-KEY: ${api_key}" \
             -H "Content-Type: application/json" \
             -d "${workflow_data}" \
-            "${N8N_API_ENDPOINT}/workflows")
+            "${N8N_API_ENDPOINT}/workflows" 2>&1)
         
         if [ $? -eq 0 ]; then
-            local new_id=$(echo "${response}" | jq -r '.data.id')
-            log "INFO" "${GREEN}Successfully created workflow ${workflow_name} (ID: ${new_id})${NC}"
+            # Check if response contains an error
+            if echo "${response}" | jq -e '.message' > /dev/null 2>&1; then
+                local error_msg=$(echo "${response}" | jq -r '.message')
+                log "ERROR" "${RED}Failed to create workflow ${workflow_name}: ${error_msg}${NC}"
+                log "DEBUG" "Response: ${response}"
+                return 1
+            else
+                local new_id=$(echo "${response}" | jq -r '.data.id // .id // empty')
+                if [ -n "${new_id}" ] && [ "${new_id}" != "null" ]; then
+                    log "INFO" "${GREEN}Successfully created workflow ${workflow_name} (ID: ${new_id})${NC}"
+                else
+                    log "WARN" "${YELLOW}Created workflow ${workflow_name} but couldn't extract ID${NC}"
+                    log "DEBUG" "Response: ${response}"
+                fi
+            fi
         else
             log "ERROR" "${RED}Failed to create workflow ${workflow_name}${NC}"
             return 1

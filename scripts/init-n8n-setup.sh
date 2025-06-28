@@ -411,6 +411,21 @@ EOF
         echo "QDRANT_CREDENTIAL_ID=${qdrant_id}" >> "$cred_file"
     fi
     
+    # Google Drive OAuth2 credential
+    log "INFO" "Setting up Google Drive OAuth2 credential..."
+    local google_data=$(cat <<EOF
+{
+    "clientId": "${GOOGLE_CLIENT_ID}",
+    "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+    "oauthTokenData": {}
+}
+EOF
+)
+    if google_id=$(create_credential "DataLive Google Drive" "googleDriveOAuth2Api" "$google_data"); then
+        echo "GOOGLE_DRIVE_CREDENTIAL_ID=${google_id}" >> "$cred_file"
+        log "WARN" "${YELLOW}Google Drive credential created but needs manual authorization via N8N UI${NC}"
+    fi
+    
     # PostgreSQL credential
     log "INFO" "Setting up PostgreSQL credential..."
     local postgres_password=$(cat "${PROJECT_ROOT}/secrets/postgres_password.txt" 2>/dev/null || echo "${POSTGRES_PASSWORD}")

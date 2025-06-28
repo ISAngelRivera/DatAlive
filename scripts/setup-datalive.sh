@@ -254,16 +254,58 @@ initialize_services() {
     fi
     
     # Initialize N8N (early, needs database)
-    log "INFO" "${CYAN}[2/5] Initializing N8N...${NC}"
+    log "INFO" "${CYAN}[2/7] Initializing N8N...${NC}"
+    
+    # First auto-register the owner account
+    if "${SCRIPT_DIR}/auto-register-n8n-owner.sh"; then
+        log "INFO" "${GREEN}✓ N8N owner account registered${NC}"
+    else
+        log "ERROR" "${RED}Failed to register N8N owner account${NC}"
+        return 1
+    fi
+    
+    # Then initialize credentials and other setup
     if "${SCRIPT_DIR}/init-n8n-setup.sh"; then
-        log "INFO" "${GREEN}✓ N8N initialized with user, credentials, and workflows${NC}"
+        log "INFO" "${GREEN}✓ N8N initialized with credentials${NC}"
     else
         log "ERROR" "${RED}Failed to initialize N8N${NC}"
         return 1
     fi
     
+    # Generate N8N API Key
+    log "INFO" "${CYAN}[3/7] Generating N8N API key...${NC}"
+    if "${SCRIPT_DIR}/generate-n8n-api-key.sh"; then
+        log "INFO" "${GREEN}✓ N8N API key generated${NC}"
+    else
+        log "ERROR" "${RED}Failed to generate N8N API key${NC}"
+        return 1
+    fi
+    
+    # Sync N8N workflows
+    log "INFO" "${CYAN}[4/7] Importing N8N workflows...${NC}"
+    if "${SCRIPT_DIR}/sync-n8n-workflows.sh"; then
+        log "INFO" "${GREEN}✓ N8N workflows imported${NC}"
+    else
+        log "ERROR" "${RED}Failed to import N8N workflows${NC}"
+        return 1
+    fi
+    
+    # Activate N8N Community License
+    log "INFO" "${CYAN}[5/7] Activating N8N Community license...${NC}"
+    if "${SCRIPT_DIR}/activate-n8n-license.sh"; then
+        log "INFO" "${GREEN}✓ N8N license activated${NC}"
+    else
+        log "WARN" "${YELLOW}⚠ N8N license activation failed${NC}"
+        log "WARN" "${YELLOW}  This is not critical, but you won't have access to:${NC}"
+        log "WARN" "${YELLOW}  - Folders for organizing workflows${NC}"
+        log "WARN" "${YELLOW}  - Workflow history (24h)${NC}"
+        log "WARN" "${YELLOW}  - Advanced debugging features${NC}"
+        log "WARN" "${YELLOW}  Check config/n8n/license-status.txt for details${NC}"
+        # Don't fail the setup for license issues
+    fi
+    
     # Initialize MinIO buckets
-    log "INFO" "${CYAN}[3/5] Initializing MinIO buckets...${NC}"
+    log "INFO" "${CYAN}[6/8] Initializing MinIO buckets...${NC}"
     if "${SCRIPT_DIR}/init-minio-buckets.sh"; then
         log "INFO" "${GREEN}✓ MinIO buckets initialized${NC}"
     else
@@ -272,7 +314,7 @@ initialize_services() {
     fi
     
     # Initialize Ollama models
-    log "INFO" "${CYAN}[4/5] Initializing Ollama models...${NC}"
+    log "INFO" "${CYAN}[7/8] Initializing Ollama models...${NC}"
     if "${SCRIPT_DIR}/init-ollama-models.sh"; then
         log "INFO" "${GREEN}✓ Ollama models initialized${NC}"
     else
@@ -281,7 +323,7 @@ initialize_services() {
     fi
     
     # Initialize Qdrant collections
-    log "INFO" "${CYAN}[5/5] Initializing Qdrant collections...${NC}"
+    log "INFO" "${CYAN}[8/8] Initializing Qdrant collections...${NC}"
     if "${SCRIPT_DIR}/init-qdrant-collections.sh"; then
         log "INFO" "${GREEN}✓ Qdrant collections initialized${NC}"
     else

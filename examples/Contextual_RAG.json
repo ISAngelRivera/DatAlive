@@ -1,0 +1,765 @@
+{
+  "name": "Contextual RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL",
+          "mode": "list",
+          "cachedResultName": "RAG Chatbot",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "31e64792-74b4-4b38-b0e0-a695056908f6",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HCMbSJ0kwVclXV8T",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        200,
+        0
+      ],
+      "id": "86bd6914-bd22-4eb4-b09d-83403c1a6915",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HCMbSJ0kwVclXV8T",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        420,
+        0
+      ],
+      "id": "d21308af-e826-41de-948c-591610f8522f",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "65de30db-9793-45f7-90b7-6f6d50e00c09",
+              "name": "text",
+              "value": "={{ \n  $json.text\n    .split('Página 7')[1]             // corta el texto en \"Página 7\" y coge lo de después\n    ? 'Página 7' + $json.text.split('Página 7')[1] // vuelve a añadir \"Página 7\" al principio\n    : $json.text                      // si no encuentra, deja el texto original\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        660,
+        0
+      ],
+      "id": "1dc23726-eb44-4fdb-ab9e-913f9d960562",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  const text = item.json.text || '';\n  const characterCount = text.length;\n  const estimatedTokens = Math.ceil(characterCount / 4); \n\n  return {\n    json: {\n      characterCount,\n      estimatedTokens\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "98853594-2979-4d5a-922c-2f00a2b1c56c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "49fdfdae-5733-4385-b9ee-29bf621aff8f",
+              "leftValue": "={{ $json.estimatedTokens }}",
+              "rightValue": 35000,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "81da6c6f-9836-4f7d-b7d5-6843f0269b7c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Edit Fields').first().json.text;\n\nconst base64 = new Buffer.from(text).toString('base64');\n\nreturn [\n  {\n    json: {\n      original: text,\n      base64: base64\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        -140
+      ],
+      "id": "9e2d49b6-816d-46f1-9d16-2107ae8245fd",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/cachedContents",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"models/gemini-1.5-flash-001\",\n  \"contents\":[\n    {\n      \"parts\":[\n        {\n          \"inline_data\": {\n            \"mime_type\":\"text/plain\",\n            \"data\": \"{{ $json.base64 }}\"\n          }\n        }\n      ],\n    \"role\": \"user\"\n    }\n  ],\n  \"systemInstruction\": {\n    \"parts\": [\n      {\n        \"text\": \"Eres un experto en legislación española. Tu tarea es analizar, resumir y comprender documentos legales como los Reales Decretos, enfocándote en la claridad, la estructura y la relevancia jurídica.\"\n      }\n    ]\n  },\n  \"ttl\": \"3600s\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1620,
+        -140
+      ],
+      "id": "426df276-e141-4285-815a-fa4f99f0b1af",
+      "name": "HTTP Request",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "uUIr4LXG5KgBn7H3",
+          "name": "Google Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Edit Fields').first().json.text;\nconst chunkSize = 1000;\nconst chunkOverlap = 200;\nconst overlapBoundary = 'word';\nconst separators = ['\\n\\n', '\\n', ' ', ''];\n\nconst result = [];\nlet start = 0;\nlet chunkIndex = 0;\n\nwhile (start < text.length) {\n  let end = Math.min(start + chunkSize, text.length);\n  \n  // Ajustar el final del chunk según el overlapBoundary\n  if (overlapBoundary === 'word') {\n    while (end < text.length && ![' ', '\\n'].includes(text[end])) {\n      end++;\n    }\n  } else if (overlapBoundary === 'sentence') {\n    while (end < text.length && !['.', '!', '?'].includes(text[end])) {\n      end++;\n    }\n    end++; // incluir el signo de puntuación\n  }\n\n  let chunk = text.slice(start, end).trim();\n\n  // Aplicar el primer separador válido\n  for (const sep of separators) {\n    if (chunk.includes(sep)) {\n      chunk = chunk.split(sep).join(sep); // sin modificar, pero referencia usada\n      break;\n    }\n  }\n\n  result.push({\n    json: {\n      chunk,\n      chunkIndex,\n    }\n  });\n\n  start += chunkSize - chunkOverlap;\n  chunkIndex++;\n}\n\nreturn result;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1880,
+        20
+      ],
+      "id": "79fa6529-5500-4231-9480-f4bef1c7467c",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1180,
+        340
+      ],
+      "id": "3e67f405-a89e-42a5-8350-0be52301b55c",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const isCached = $('Code2').all().length > 0;\nconst cachedContext = isCached ? $('Code2').first().json.name : null;\n\nconst output = $input.all().map(item => {\n  const chunk = item.json.chunk;\n\n  const noCachePrompt = `Tienes el fragmento del documento a continuación:\n\n<chunk>\n${chunk}\n</chunk>\n\nPor favor, proporciona un resumen breve para fines de recuperación.`;\n\n  const cachedPrompt = `Tienes el documento dentro de la caché de contexto.\n\n<chunk>\n${chunk}\n</chunk>\nProporciona un contexto breve y conciso para situar este fragmento dentro del documento completo, con el objetivo de mejorar la recuperación por búsqueda del fragmento. Responde solo con el contexto conciso y nada más.`;\n\n  const thePrompt = isCached\n    ? {\n        prompt: {\n          json: {\n            contents: [\n              {\n                parts: [{ text: cachedPrompt }],\n                role: \"user\",\n              },\n            ],\n            cachedContent: cachedContext,\n          },\n        },\n      }\n    : {\n        prompt: {\n          json: {\n            contents: [\n              {\n                parts: [{ text: noCachePrompt }],\n                role: \"user\",\n              },\n            ],\n          },\n        },\n      };\n\n  return {\n    json: {\n      ...item.json,\n      thePrompt,\n    },\n  };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        440
+      ],
+      "id": "d0edcbae-97f7-412f-a150-6c916a5bc02e",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.thePrompt.prompt.json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1580,
+        440
+      ],
+      "id": "f58e8fd3-03d9-4a18-9d0a-9d3c61e17804",
+      "name": "HTTP Request1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "uUIr4LXG5KgBn7H3",
+          "name": "Google Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0522a035-393a-4d61-889a-4d0bfc7bb4ae",
+              "name": "chunk",
+              "value": "={{ $json.candidates[0].content.parts[0].text }} - {{ $('Code2').item.json.chunk }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1780,
+        440
+      ],
+      "id": "e1fbd8e4-558a-4231-b981-a1b244535793",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $('Edit Fields1').item.json.chunk }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        2120,
+        680
+      ],
+      "id": "913bade3-ecd7-41b6-84bd-62676819270c",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v3.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        1940,
+        680
+      ],
+      "id": "10070c6d-64b7-4311-884c-8961a3d212db",
+      "name": "Embeddings Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "t64wsdRGJD9q7mQN",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chunkSize": 100000
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        860
+      ],
+      "id": "d1171b02-b306-41d5-8f2b-d631e372026b",
+      "name": "Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "N8N-ContextualRAG",
+          "mode": "list",
+          "cachedResultName": "N8N-ContextualRAG"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        440
+      ],
+      "id": "e0b47b8d-d4cc-4ba4-b176-2b0c42652bb2",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "RGmT0qFLCHl3zPg0",
+          "name": "QdrantApi "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://1448e01c-b5cb-41bb-90d1-c88f45216115.europe-west3-0.gcp.cloud.qdrant.io:6333/collections/N8N-ContextualRAG",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\",\n  \"api-key\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.WRhavCL8K39C5lj_9ib9Echx7kmdV1Z_VQONCC-SVgY\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"vectors\": {\n    \"size\": 1024,\n    \"distance\": \"Cosine\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1040,
+        -20
+      ],
+      "id": "4c325423-3f19-4d68-8791-adb0d687ebff",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -140,
+        980
+      ],
+      "id": "d84622a8-6a5e-45d2-a146-dcd090a2a231",
+      "name": "When chat message received",
+      "webhookId": "f701e8c7-e102-4020-a386-7f556a5f8b48"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Eres un abodago de leyes del real decreto siempre que te pregunten cualquier cosa sobre el real decreto deberás llamar a tu herramienta \"real_decreto_knowledge\" toda la información debe ser de ahí jamás te inventarás información o obtendrás información de internet ni de ningún otro lado solo de la herramienta"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        100,
+        980
+      ],
+      "id": "9a927e12-fe8d-42a8-8900-a1759f8dbd13",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -100,
+        1200
+      ],
+      "id": "4452e8f4-0427-46ab-baa1-580e139bb17e",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "hCfiEkF3eN09aoJd",
+          "name": "Pardo API Key"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        100,
+        1200
+      ],
+      "id": "06efb37b-c77b-4cee-b0ce-105fa0fbcc1d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "real_decreto_knowledge",
+        "toolDescription": "Llama a esta herramienta siempre que el cliente te pregunte cualquier cosa sobre el real decreto para obtener la información más precisa posible",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "N8N-ContextualRAG",
+          "mode": "list",
+          "cachedResultName": "N8N-ContextualRAG"
+        },
+        "topK": 20,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        1220
+      ],
+      "id": "317b08e0-d822-4543-ac4a-397a0cf8d14a",
+      "name": "Qdrant Vector Store1",
+      "credentials": {
+        "qdrantApi": {
+          "id": "RGmT0qFLCHl3zPg0",
+          "name": "QdrantApi "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v3.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        300,
+        1380
+      ],
+      "id": "ab2bfb97-6aef-445a-9dd1-ace51fde3c52",
+      "name": "Embeddings Cohere1",
+      "credentials": {
+        "cohereApi": {
+          "id": "t64wsdRGJD9q7mQN",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "https://1448e01c-b5cb-41bb-90d1-c88f45216115.europe-west3-0.gcp.cloud.qdrant.io:6333/collections/N8N-ContextualRAG",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\",\n  \"api-key\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.WRhavCL8K39C5lj_9ib9Echx7kmdV1Z_VQONCC-SVgY\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -740,
+        -20
+      ],
+      "id": "bfa0e133-c758-4f5c-951d-305c0c52ccc1",
+      "name": "HTTP Request3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fc8a9e27-53dc-4331-9e51-5add592514cb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0f166095b1b8b10613ed6feb74af1271518bf426c33e252cf0986acc212baa71"
+  },
+  "id": "47sOSoie0xcWmlw6",
+  "tags": []
+}

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/sync-n8n-workflows.sh:*)",
+      "Bash(grep:*)",
+      "Bash(./scripts/generate-n8n-api-key.sh:*)",
+      "Bash(curl:*)",
+      "Bash(cat:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(rm:*)",
+      "Bash(./scripts/setup-datalive.sh:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(true)",
+      "Bash(docker-compose:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker rmi:*)",
+      "Bash(./scripts/auto-register-n8n-owner.sh:*)",
+      "Bash(docker exec:*)",
+      "Bash(./scripts/init-n8n-setup.sh:*)",
+      "Bash(./scripts/activate-n8n-license.sh:*)",
+      "Bash(docker restart:*)",
+      "Bash(scripts/init-n8n-setup.sh:*)",
+      "Bash(docker:*)"
+    ],
+    "deny": []
+  }
+}

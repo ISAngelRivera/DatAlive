@@ -1,0 +1,121 @@
+[0;36m
+    ____        __        __    _           
+   / __ \____ _/ /_____ _/ /   (_)   _____  
+  / / / / __ `/ __/ __ `/ /   / / | / / _ \ 
+ / /_/ / /_/ / /_/ /_/ / /___/ /| |/ /  __/ 
+/_____/\__,_/\__/\__,_/_____/_/ |___/\___/  
+                                             
+   RAG System Setup v2.0 - 2025 Edition
+[0m
+[2025-06-25 14:17:33] [INFO] [0;35mStarting DataLive RAG System setup...[0m
+[2025-06-25 14:17:33] [INFO] Configuration file: /Users/angelrivera/Desktop/GIT/DatAlive/.env
+[2025-06-25 14:17:33] [INFO] Creating required directories...
+[2025-06-25 14:17:33] [INFO] [0;32m✓ Directories created[0m
+[2025-06-25 14:17:33] [INFO] Validating environment configuration...
+[2025-06-25 14:17:33] [INFO] [0;32m✓ Environment validation passed[0m
+[2025-06-25 14:17:33] [INFO] Checking Docker installation...
+grep: invalid option -- P
+usage: grep [-abcdDEFGHhIiJLlMmnOopqRSsUVvwXxZz] [-A num] [-B num] [-C[num]]
+	[-e pattern] [-f file] [--binary-files=value] [--color=when]
+	[--context[=num]] [--directories=action] [--label] [--line-buffered]
+	[--null] [pattern] [file ...]
+[2025-06-25 14:17:33] [INFO] Docker version: 
+[2025-06-25 14:17:33] [INFO] [0;32m✓ Docker and Docker Compose are ready[0m
+[2025-06-25 14:17:33] [INFO] Checking and generating secrets...
+[2025-06-25 14:17:33] [INFO] [0;32m✓ All secrets already exist[0m
+[2025-06-25 14:17:33] [INFO] Configuring monitoring stack...
+[2025-06-25 14:17:33] [INFO] [0;32m✓ Monitoring configured[0m
+[2025-06-25 14:17:33] [INFO] [0;34mStarting Docker stack...[0m
+[2025-06-25 14:17:33] [INFO] Pulling latest Docker images...
+ redis Pulling 
+ promtail Pulling 
+ grafana Pulling 
+ n8n Pulling 
+ postgres Pulling 
+ qdrant Pulling 
+ prometheus Pulling 
+ ollama Pulling 
+ minio Pulling 
+ loki Pulling 
+ promtail Pulled 
+ ollama Pulled 
+ prometheus Pulled 
+ minio Pulled 
+ grafana Pulled 
+ redis Pulled 
+ loki Pulled 
+ postgres Pulled 
+ qdrant Pulled 
+ n8n Pulled 
+[2025-06-25 14:17:34] [INFO] Starting services...
+ Network datalive_frontend  Creating
+ Network datalive_frontend  Created
+ Network datalive_monitoring  Creating
+ Network datalive_monitoring  Created
+ Network datalive_backend  Creating
+ Network datalive_backend  Created
+ Volume "datalive_loki_data"  Creating
+ Volume "datalive_loki_data"  Created
+ Volume "datalive_qdrant_data"  Creating
+ Volume "datalive_qdrant_data"  Created
+ Volume "datalive_grafana_data"  Creating
+ Volume "datalive_grafana_data"  Created
+ Volume "datalive_prometheus_data"  Creating
+ Volume "datalive_prometheus_data"  Created
+ Volume "datalive_redis_data"  Creating
+ Volume "datalive_redis_data"  Created
+ Volume "datalive_postgres_data"  Creating
+ Volume "datalive_postgres_data"  Created
+ Volume "datalive_ollama_models"  Creating
+ Volume "datalive_ollama_models"  Created
+ Volume "datalive_minio_data"  Creating
+ Volume "datalive_minio_data"  Created
+ Volume "datalive_n8n_data"  Creating
+ Volume "datalive_n8n_data"  Created
+ Container datalive-ollama  Creating
+ Container datalive-loki  Creating
+ Container datalive-qdrant  Creating
+ Container datalive-minio  Creating
+ Container datalive-redis  Creating
+ Container datalive-prometheus  Creating
+ Container datalive-postgres  Creating
+ Container datalive-ollama  Created
+ Container datalive-prometheus  Created
+ Container datalive-grafana  Creating
+ Container datalive-minio  Created
+ Container datalive-qdrant  Created
+ Container datalive-loki  Created
+ Container datalive-promtail  Creating
+ Container datalive-redis  Created
+ Container datalive-postgres  Created
+ Container datalive-n8n  Creating
+ Container datalive-grafana  Created
+ Container datalive-promtail  Created
+ Container datalive-n8n  Created
+ Container datalive-redis  Starting
+ Container datalive-prometheus  Starting
+ Container datalive-minio  Starting
+ Container datalive-loki  Starting
+ Container datalive-postgres  Starting
+ Container datalive-qdrant  Starting
+ Container datalive-ollama  Starting
+ Container datalive-loki  Started
+ Container datalive-promtail  Starting
+ Container datalive-ollama  Started
+ Container datalive-minio  Started
+ Container datalive-redis  Started
+ Container datalive-prometheus  Started
+ Container datalive-grafana  Starting
+ Container datalive-postgres  Started
+ Container datalive-qdrant  Started
+ Container datalive-redis  Waiting
+ Container datalive-postgres  Waiting
+ Container datalive-promtail  Started
+ Container datalive-grafana  Started
+ Container datalive-redis  Healthy
+ Container datalive-postgres  Healthy
+ Container datalive-n8n  Starting
+ Container datalive-n8n  Started
+[2025-06-25 14:17:41] [INFO] Waiting for services to be healthy...
+/Users/angelrivera/Desktop/GIT/DatAlive/scripts/wait-for-healthy.sh: line 24: declare: -A: invalid option
+declare: usage: declare [-afFirtx] [-p] [name[=value] ...]

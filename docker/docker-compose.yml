@@ -14,9 +14,7 @@ x-healthcheck-defaults: &healthcheck-defaults
 services:
   # 1. Orquestador Principal - N8N
   n8n:
-    build:
-      context: .
-      dockerfile: Dockerfile.n8n
+    image: n8nio/n8n:latest
     container_name: datalive-n8n
     restart: unless-stopped
     user: "1000:1000"
@@ -42,6 +40,8 @@ services:
       QUEUE_BULL_REDIS_HOST: redis
       QUEUE_BULL_REDIS_PORT: 6379
       QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      N8N_LICENSE_ACTIVATION_KEY: ${N8N_LICENSE_KEY}
+      N8N_LICENSE_TENANT_ID: ${N8N_LICENSE_TENANT_ID}
     volumes:
       - n8n_data:/home/node/.n8n
       - ./workflows:/workflows:ro

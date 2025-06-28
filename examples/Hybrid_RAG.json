@@ -1,0 +1,2469 @@
+{
+  "name": "Hybrid_RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL",
+          "mode": "list",
+          "cachedResultName": "RAG Chatbot",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        0
+      ],
+      "id": "4d4b5f3e-aff5-4ab2-bfeb-07d2d227ee4d",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Drive Trigger').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "2c237691-0af9-4f8d-8b16-89ddce5c61a3",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "id": "42e083af-2cb1-4c8c-9950-e2300a14cec0",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "batchSize": 96,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        900,
+        0
+      ],
+      "id": "77c7dc2f-1d49-42f6-baa7-2035fecbd62a",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "chunk",
+              "renameField": true,
+              "outputFieldName": "inputs"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        100
+      ],
+      "id": "13b612de-72f3-4c6e-81f9-22f4bd056f56",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da3919f2-be3b-425e-a2d2-f32403cfd55d",
+              "name": "INDEX_HOST",
+              "value": "https://n8n-bipo4oh.svc.aped-4627-b74a.pinecone.io",
+              "type": "string"
+            },
+            {
+              "id": "f3c1dfb1-c66c-43fd-83ac-99b18996732f",
+              "name": "NAMESPACE",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -260,
+        0
+      ],
+      "id": "4b9be59b-08c5-473b-8220-bf957c2f0efd",
+      "name": "Set Vars"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pinecone.io/embed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pinecone-API-Version",
+              "value": "2025-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"multilingual-e5-large\",\n  \"parameters\": {\n    \"input_type\": \"passage\",\n    \"truncate\": \"END\"\n  },\n  \"inputs\": {{ JSON.stringify($json.inputs) }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        100
+      ],
+      "id": "8ba657a5-bff1-4819-a055-43775ea4e2a4",
+      "name": "Generate Dense Embedding",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "sy49O6lFS1DaEcMp",
+          "name": "Unnamed credential"
+        },
+        "httpHeaderAuth": {
+          "id": "q2zvgai7Bj11jimC",
+          "name": "Header Pinecone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pinecone.io/embed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pinecone-API-Version",
+              "value": "2025-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"pinecone-sparse-english-v0\",\n  \"parameters\": {\n    \"input_type\": \"passage\",\n    \"truncate\": \"END\"\n  },\n  \"inputs\": {{ JSON.stringify($('Convert Format').item.json.inputs) }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        100
+      ],
+      "id": "8fff5468-de5b-467f-86e8-f38df2907096",
+      "name": "Generate Sparse Embedding",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "q2zvgai7Bj11jimC",
+          "name": "Header Pinecone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create the final array of { text: ... } objects\nconst inputs = [];\n\nfor (const item of $input.all()) {\n  for (const inputText of item.json.inputs) {\n    inputs.push({ text: inputText });\n  }\n}\n\nreturn [{ json: { inputs } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        100
+      ],
+      "id": "75a6670a-76be-4bcf-b86a-57c2f2faa08f",
+      "name": "Convert Format"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text;\nconst chunkSize = 500;\nconst chunkOverlap = 100;\nconst overlapBoundary = 'word'; // Cambia a 'sentence' si prefieres dividir por frases\nconst separators = ['\\n\\n', '\\n', ' ', ''];\n\n/**\n * Ajusta el límite de solapamiento para que empiece en un límite de palabra o frase.\n */\nfunction getOverlapBoundary(prevChunk, overlap, type) {\n  let candidateStart = prevChunk.length - overlap;\n  if (candidateStart < 0) candidateStart = 0;\n\n  const substring = prevChunk.slice(candidateStart);\n\n  if (type === 'sentence') {\n    const sentenceRegex = /[.!?]\\s*/g;\n    let lastIndex = -1;\n    let match;\n    while ((match = sentenceRegex.exec(substring)) !== null) {\n      lastIndex = match.index + match[0].length;\n    }\n    if (lastIndex !== -1 && lastIndex < substring.length) {\n      return substring.slice(lastIndex);\n    }\n  } else if (type === 'word') {\n    const spaceIndex = substring.indexOf(' ');\n    if (spaceIndex !== -1) {\n      return substring.slice(spaceIndex + 1);\n    }\n  }\n\n  // Si no se encuentra un punto o espacio claro, devuelve los últimos X caracteres\n  return prevChunk.slice(-overlap);\n}\n\n/**\n * Fragmenta recursivamente usando distintos separadores\n */\nfunction recursiveSplit(text, chunkSize, overlap, seps) {\n  const sep = seps[0];\n  const chunks = [];\n\n  const parts = text.split(sep);\n  let current = '';\n  for (let i = 0; i < parts.length; i++) {\n    const part = parts[i];\n    const tentative = current ? current + sep + part : part;\n\n    if (tentative.length <= chunkSize) {\n      current = tentative;\n    } else {\n      if (current) {\n        chunks.push(current);\n      }\n\n      if (part.length > chunkSize) {\n        const subChunks = recursiveSplit(part, chunkSize, overlap, seps.slice(1));\n        chunks.push(...subChunks);\n        current = '';\n      } else {\n        current = part;\n      }\n    }\n  }\n\n  if (current) {\n    chunks.push(current);\n  }\n\n  // Aplicar solapamiento sin duplicar contenido\n  const finalChunks = [];\n  for (let i = 0; i < chunks.length; i++) {\n    const chunk = chunks[i];\n    if (i === 0) {\n      finalChunks.push(chunk);\n    } else {\n      const prev = finalChunks[finalChunks.length - 1];\n      const overlapText = getOverlapBoundary(prev, chunkOverlap, overlapBoundary);\n\n      let adjustedChunk = chunk;\n      if (!chunk.startsWith(overlapText)) {\n        adjustedChunk = overlapText + chunk;\n      }\n\n      finalChunks.push(adjustedChunk);\n    }\n  }\n\n  return finalChunks;\n}\n\nreturn recursiveSplit(text, chunkSize, chunkOverlap, separators).map((chunk, i) => {\n  return {\n    json: {\n      id: i,\n      chunk\n    }\n  };\n});\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "e8a9979a-dc68-4480-af32-4b95e23a5182",
+      "name": "Chunking"
+    },
+    {
+      "parameters": {
+        "jsCode": "function generateUUID() {\n  // RFC4122 version 4 UUID\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\n// Assume input[0] = Dense, input[1] = Sparse\nconst denseEmbeddings = $('Generate Dense Embedding').first().json.data;\nconst sparseEmbeddings = $input.first().json.data;\nconst chunks = $('Convert Format').first().json.inputs;\n\nconst vectors = [];\n\nfor (let i = 0; i < denseEmbeddings.length; i++) {\n  const dense = denseEmbeddings[i];\n  const sparse = sparseEmbeddings[i];\n  const chunk = chunks[i];\n\n  vectors.push({\n    id: generateUUID(),\n    values: dense.values,\n    sparseValues: {\n      indices: sparse.sparse_indices,\n      values: sparse.sparse_values\n    },\n    metadata: {\n      text: chunk.text\n    }\n  });\n}\n\nreturn [\n  {\n    output: {\n      vectors,\n      namespace: $('Set Vars').first().json.NAMESPACE\n    }\n  }\n]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        100
+      ],
+      "id": "eb9fc9c7-fe37-4762-8319-965bee3d93cb",
+      "name": "Build Vector Array"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Set Vars').item.json.INDEX_HOST }}/vectors/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pinecone-API-Version",
+              "value": "2025-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.output) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        100
+      ],
+      "id": "912b08e9-8dfe-4353-88bf-e6f0c8e361b0",
+      "name": "Upsert Vectors",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "q2zvgai7Bj11jimC",
+          "name": "Header Pinecone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aebeb8ad-894d-4bd2-97b0-3aa014127772",
+              "name": "text",
+              "value": "={{ \n  $json.text\n    .split('Página 7')[1]             // corta el texto en \"Página 7\" y coge lo de después\n    ? 'Página 7' + $json.text.split('Página 7')[1] // vuelve a añadir \"Página 7\" al principio\n    : $json.text                      // si no encuentra, deja el texto original\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        0
+      ],
+      "id": "20d0fa03-0029-4e45-9835-3b05fe833dce",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da3919f2-be3b-425e-a2d2-f32403cfd55d",
+              "name": "INDEX_HOST",
+              "value": "https://n8n-bipo4oh.svc.aped-4627-b74a.pinecone.io",
+              "type": "string"
+            },
+            {
+              "id": "f3c1dfb1-c66c-43fd-83ac-99b18996732f",
+              "name": "NAMESPACE",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1300,
+        480
+      ],
+      "id": "11b2e294-722b-469c-a57c-f4327f6f4b95",
+      "name": "Set Vars1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pinecone.io/embed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pinecone-API-Version",
+              "value": "2025-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"multilingual-e5-large\",\n  \"parameters\": {\n    \"input_type\": \"query\",\n    \"truncate\": \"END\"\n  },\n    \"inputs\": [\n          {\"text\": {{ JSON.stringify($('When Executed by Another Workflow').item.json.query) }}}]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        480
+      ],
+      "id": "ced4d669-6a54-48a8-8ae0-848bd1595e15",
+      "name": "Generate Dense Embedding1",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "sy49O6lFS1DaEcMp",
+          "name": "Unnamed credential"
+        },
+        "httpHeaderAuth": {
+          "id": "q2zvgai7Bj11jimC",
+          "name": "Header Pinecone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pinecone.io/embed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pinecone-API-Version",
+              "value": "2025-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"pinecone-sparse-english-v0\",\n  \"parameters\": {\n    \"input_type\": \"query\",\n    \"truncate\": \"END\"\n  },\n    \"inputs\": [\n          {\"text\": {{ JSON.stringify($('When Executed by Another Workflow').item.json.query) }}}]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        480
+      ],
+      "id": "ec54134e-9b51-41a1-87a6-cf0bd3ff0e56",
+      "name": "Generate Sparse Embedding1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "q2zvgai7Bj11jimC",
+          "name": "Header Pinecone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        3280,
+        380
+      ],
+      "id": "cf7cbeaf-9599-4aa3-a9e0-99d85d8de8c2",
+      "name": "When chat message received",
+      "webhookId": "0f56adec-1e87-455c-8272-644f9e6e3f92"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Eres un agente experto en el real decreto y deberás siempre consultar tu base de conocimiento para responder la pregunta con la mayor precisión posible"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        40,
+        380
+      ],
+      "id": "8b307cd9-0114-4c6c-abd3-ab59f6559835",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -60,
+        600
+      ],
+      "id": "0afc7649-4951-4e16-ab3d-14b7c93bd3c2",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "rO7izYzCrINKAB8D",
+          "name": "OpenAI Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        100,
+        640
+      ],
+      "id": "9b5cca9f-0353-4b0b-bc66-edab46eb4e8f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "description": "Usa esta herramienta para buscar en la base de conocimientos",
+        "workflowId": {
+          "__rl": true,
+          "value": "Lu3DtShdvJZXPN5V",
+          "mode": "list",
+          "cachedResultName": "Pinecone"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('query', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "query"
+          ],
+          "schema": [
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        280,
+        660
+      ],
+      "id": "a12c8446-eaab-4300-8c57-5ad2709408d4",
+      "name": "Knowledgebase"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        4600,
+        520
+      ],
+      "id": "b33cb8ff-e10c-4282-8724-51e42e5fc3c5",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Set Vars1').item.json.INDEX_HOST }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pinecone-API-Version",
+              "value": "2025-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"namespace\": \"{{ $('Set Vars1').item.json.NAMESPACE }}\",\n  \"vector\": {{ JSON.stringify($('Generate Dense Embedding1').item.json.data[0].values) }},\n  \"sparseVector\": {\n    \"indices\": {{ JSON.stringify($json.data[0].sparse_indices) }},\n    \"values\": {{ JSON.stringify($json.data[0].sparse_values) }}\n  },\n  \"topK\": 10,\n  \"includeValues\": false,\n  \"includeMetadata\": true\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        480
+      ],
+      "id": "82a5ac8e-13c9-4502-a4e4-1c91cf0e6922",
+      "name": "Query Pinecone",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "q2zvgai7Bj11jimC",
+          "name": "Header Pinecone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.2,
+      "position": [
+        -1560,
+        20
+      ],
+      "id": "ed631f08-015c-48c1-9b25-c55165a0c50a",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "LDnKuSSpZfNeroIx",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1620,
+        240
+      ],
+      "id": "66baa733-e210-4ad5-952e-3090476e8fee",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "rO7izYzCrINKAB8D",
+          "name": "OpenAI Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        -1420,
+        240
+      ],
+      "id": "edd3cb20-a3f5-47e7-a254-feb7e52f6a00",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -1340,
+        460
+      ],
+      "id": "221aec7e-e1e6-4d05-a650-0f0c50a8a585",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL",
+          "mode": "list",
+          "cachedResultName": "RAG Chatbot",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2300,
+        20
+      ],
+      "id": "2b59d572-8817-47f8-bb1a-853540975a11",
+      "name": "Google Drive Trigger1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Drive Trigger1').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2100,
+        20
+      ],
+      "id": "4267d337-055f-48aa-8616-87b3f0914a61",
+      "name": "Google Drive1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -1880,
+        20
+      ],
+      "id": "623da75e-943a-4770-8cef-ea20bd86de22",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Eres un agente experto en el real decreto y deberás siempre consultar tu base de conocimiento para responder la pregunta con la mayor precisión posible.\n\nSolo generarás una respuesta basada en los resultados obtenidos por la base de conocimiento."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -2140,
+        340
+      ],
+      "id": "9c7ae245-f551-44fb-b4f6-822974f5db6e",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -2240,
+        560
+      ],
+      "id": "579d640c-7415-4d9f-b68f-0e7b6d48311b",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "rO7izYzCrINKAB8D",
+          "name": "OpenAI Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -2080,
+        600
+      ],
+      "id": "7b7d3eb1-d450-407c-9565-a1001c7b22d1",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Llamarás a esta herramienta cuando necesites obtener información de la base de conocimiento",
+        "method": "POST",
+        "url": "https://xkadcvikeirxvwiuhmgc.supabase.co/functions/v1/hybrid_search_function",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYWRjdmlrZWlyeHZ3aXVobWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1NTE0MTgsImV4cCI6MjA2NTEyNzQxOH0.TBHuKQ5B0sXnh9d4Xs34LG1DSFht9Rasl9pELjJXbFc"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        -1900,
+        560
+      ],
+      "id": "d119f639-7e33-430c-9c43-655a7798e342",
+      "name": "Knowledgebase1"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://9b56358d-947d-42bb-acb8-f83c67b6c6b4.qdrant.io/collections/raghibrido",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"vectors\": {\n    \"dense\": {\n      \"size\": 1536,\n      \"distance\": \"Cosine\"\n    }\n  },\n  \"sparse_vectors\": {\n    \"sparse\": {}\n  },\n  \"optimizers_config\": {\n    \"default_segment_number\": 2\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7360,
+        400
+      ],
+      "id": "dac5bda8-0439-4327-a752-c9915b7dbc56",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NEmdgwq7wbdJP9n4",
+          "name": "Header Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL",
+          "mode": "list",
+          "cachedResultName": "RAG Chatbot",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        2980,
+        20
+      ],
+      "id": "52602eb9-58ae-4af4-b54b-f98cc9c2df9f",
+      "name": "Google Drive Trigger2",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Drive Trigger2').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3440,
+        20
+      ],
+      "id": "f66ec0dc-a437-4e47-a3c8-16035bff6819",
+      "name": "Google Drive2",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        3680,
+        20
+      ],
+      "id": "d2a24cf5-dcb1-410a-bdaf-6ff376370fcb",
+      "name": "Extract from File2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da3919f2-be3b-425e-a2d2-f32403cfd55d",
+              "name": "INDEX_HOST",
+              "value": "https://n8n-bipo4oh.svc.aped-4627-b74a.pinecone.io",
+              "type": "string"
+            },
+            {
+              "id": "f3c1dfb1-c66c-43fd-83ac-99b18996732f",
+              "name": "NAMESPACE",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3200,
+        20
+      ],
+      "id": "e81f9de0-e076-4113-baeb-ca76e5694adb",
+      "name": "Set Vars2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aebeb8ad-894d-4bd2-97b0-3aa014127772",
+              "name": "text",
+              "value": "={{ \n  $json.text\n    .split('Página 7')[1]             // corta el texto en \"Página 7\" y coge lo de después\n    ? 'Página 7' + $json.text.split('Página 7')[1] // vuelve a añadir \"Página 7\" al principio\n    : $json.text                      // si no encuentra, deja el texto original\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3920,
+        20
+      ],
+      "id": "46ecd2af-6d31-4d8e-87c6-46cb5dff3814",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text;\nconst chunkSize = 500;\nconst chunkOverlap = 100;\nconst overlapBoundary = 'word'; // Cambia a 'sentence' si prefieres dividir por frases\nconst separators = ['\\n\\n', '\\n', ' ', ''];\n\n/**\n * Ajusta el límite de solapamiento para que empiece en un límite de palabra o frase.\n */\nfunction getOverlapBoundary(prevChunk, overlap, type) {\n  let candidateStart = prevChunk.length - overlap;\n  if (candidateStart < 0) candidateStart = 0;\n\n  const substring = prevChunk.slice(candidateStart);\n\n  if (type === 'sentence') {\n    const sentenceRegex = /[.!?]\\s*/g;\n    let lastIndex = -1;\n    let match;\n    while ((match = sentenceRegex.exec(substring)) !== null) {\n      lastIndex = match.index + match[0].length;\n    }\n    if (lastIndex !== -1 && lastIndex < substring.length) {\n      return substring.slice(lastIndex);\n    }\n  } else if (type === 'word') {\n    const spaceIndex = substring.indexOf(' ');\n    if (spaceIndex !== -1) {\n      return substring.slice(spaceIndex + 1);\n    }\n  }\n\n  // Si no se encuentra un punto o espacio claro, devuelve los últimos X caracteres\n  return prevChunk.slice(-overlap);\n}\n\n/**\n * Fragmenta recursivamente usando distintos separadores\n */\nfunction recursiveSplit(text, chunkSize, overlap, seps) {\n  const sep = seps[0];\n  const chunks = [];\n\n  const parts = text.split(sep);\n  let current = '';\n  for (let i = 0; i < parts.length; i++) {\n    const part = parts[i];\n    const tentative = current ? current + sep + part : part;\n\n    if (tentative.length <= chunkSize) {\n      current = tentative;\n    } else {\n      if (current) {\n        chunks.push(current);\n      }\n\n      if (part.length > chunkSize) {\n        const subChunks = recursiveSplit(part, chunkSize, overlap, seps.slice(1));\n        chunks.push(...subChunks);\n        current = '';\n      } else {\n        current = part;\n      }\n    }\n  }\n\n  if (current) {\n    chunks.push(current);\n  }\n\n  // Aplicar solapamiento sin duplicar contenido\n  const finalChunks = [];\n  for (let i = 0; i < chunks.length; i++) {\n    const chunk = chunks[i];\n    if (i === 0) {\n      finalChunks.push(chunk);\n    } else {\n      const prev = finalChunks[finalChunks.length - 1];\n      const overlapText = getOverlapBoundary(prev, chunkOverlap, overlapBoundary);\n\n      let adjustedChunk = chunk;\n      if (!chunk.startsWith(overlapText)) {\n        adjustedChunk = overlapText + chunk;\n      }\n\n      finalChunks.push(adjustedChunk);\n    }\n  }\n\n  return finalChunks;\n}\n\nreturn recursiveSplit(text, chunkSize, chunkOverlap, separators).map((chunk, i) => {\n  return {\n    json: {\n      id: i,\n      chunk\n    }\n  };\n});\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4140,
+        20
+      ],
+      "id": "f2c73043-5824-4957-a7e4-fee969eb593f",
+      "name": "Chunking1"
+    },
+    {
+      "parameters": {
+        "batchSize": 96,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4380,
+        20
+      ],
+      "id": "8d036bc7-c3fc-4140-a822-eed5e3cc5064",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "chunk",
+              "renameField": true,
+              "outputFieldName": "inputs"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4600,
+        120
+      ],
+      "id": "197b137a-0434-4a63-86a5-42308b686ced",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputs = [];\nfor (const item of $input.all()) {\n  for (const inputText of item.json.inputs) {\n    inputs.push(inputText + \" [MASK]\"); // Añade [MASK] al final de cada chunk\n  }\n}\nreturn [{ json: { inputs } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4840,
+        120
+      ],
+      "id": "588b6b7d-0250-4c67-87fa-74d3a9a58067",
+      "name": "Convert Format1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($('Convert Format1').item.json.inputs) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5060,
+        120
+      ],
+      "id": "18edcfe4-fe14-48bf-961c-3c0892ebf060",
+      "name": "Generate Dense Embeding",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RpdwUddo76tFZgpo",
+          "name": "Header OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/naver/splade-cocondenser-ensembledistil",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": {{ JSON.stringify($('Convert Format1').item.json.inputs) }},\n  \"options\": { \"wait_for_model\": true }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5280,
+        120
+      ],
+      "id": "812ceaca-60f3-4b64-9493-e04d9488917e",
+      "name": "Generate Sparse Embeding",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "syEMknDWUmG7jwMW",
+          "name": "Header Hugging Face"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function generateUUID() {\n  // RFC4122 version 4 UUID\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\n// Extrae embeddings densos y esparcidos\nconst denseEmbeddings = $('Generate Dense Embeding').first().json.data.map(item => item.embedding); // Extrae embeddings de OpenAI\nconst sparseEmbeddings = $input.first().json; // Array global de objetos {score, token, ...} de Hugging Face\nconst chunks = $('Convert Format1').first().json.inputs; // Array de chunks\n\nconst vectors = [];\n\n// Distribuir términos esparcidos entre chunks (simplificación)\nconst totalSparseTerms = sparseEmbeddings.length;\nconst termsPerChunk = Math.floor(totalSparseTerms / denseEmbeddings.length) || 1; // Aproxima términos por chunk\n\nfor (let i = 0; i < denseEmbeddings.length; i++) {\n  const dense = denseEmbeddings[i];\n  const chunk = chunks[i];\n\n  // Selecciona un subconjunto de términos esparcidos para este chunk\n  const startIdx = i * termsPerChunk;\n  const endIdx = startIdx + termsPerChunk;\n  const sparseData = sparseEmbeddings.slice(startIdx, endIdx > totalSparseTerms ? totalSparseTerms : endIdx);\n\n  // Transforma los embeddings esparcidos\n  const sparseIndices = sparseData.map(item => item.token); // Usa 'token' como índices\n  const sparseValues = sparseData.map(item => item.score); // Usa 'score' como valores\n\n  vectors.push({\n    id: generateUUID(),\n    vector: { \"dense\": dense }, // Formato de Qdrant para vectores densos\n    sparse_vector: { \"sparse\": { \n      indices: sparseIndices,\n      values: sparseValues \n    } },\n    payload: { \"text\": chunk } // Sin .text si chunks son strings directamente\n  });\n}\n\nreturn [\n  {\n    json: {\n      points: vectors,\n      collection_name: \"raghibrido\" // O $('Set Vars').first().json.COLLECTION_NAME\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5500,
+        120
+      ],
+      "id": "d1f08dc9-d9a5-4a14-b31a-81b2a9b5d814",
+      "name": "Build Vector Array1"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://8b9ae7e6-4fea-4fef-9114-eace90888661.europe-west3-0.gcp.cloud.qdrant.io/collections/raghibrido/points",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"points\": {{ JSON.stringify($json.points) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5720,
+        120
+      ],
+      "id": "e80fd201-6def-4750-9015-22c8c5a04f42",
+      "name": "Upsert Vectors1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NEmdgwq7wbdJP9n4",
+          "name": "Header Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f337fe9a-3575-4e9f-aaa8-96b8d39ddf82",
+              "name": "url",
+              "value": "https://8b9ae7e6-4fea-4fef-9114-eace90888661.europe-west3-0.gcp.cloud.qdrant.io:6333",
+              "type": "string"
+            },
+            {
+              "id": "ea583f01-78c6-45cc-a4a8-3329039015e2",
+              "name": "api",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Tko_q79leOkjPqxacLGTD9vflWBMsxHgx_RxAVL3oEc",
+              "type": "string"
+            },
+            {
+              "id": "eda1b639-ace3-43f6-879c-af66f094a1c2",
+              "name": "id",
+              "value": "8b9ae7e6-4fea-4fef-9114-eace90888661",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8380,
+        220
+      ],
+      "id": "c7bdac28-8805-4a9c-95a5-822638f760ed",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://8b9ae7e6-4fea-4fef-9114-eace90888661.europe-west3-0.gcp.cloud.qdrant.io/collections/raghibrido",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"vectors\": {\n    \"dense\": {\n      \"size\": 1536,\n      \"distance\": \"Cosine\"\n    }\n  },\n  \"sparse_vectors\": {\n    \"sparse\": {}\n  },\n  \"optimizers_config\": {\n    \"default_segment_number\": 2\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8400,
+        440
+      ],
+      "id": "f0593b6d-f55a-4ece-ab50-7f4f883961e9",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NEmdgwq7wbdJP9n4",
+          "name": "Header Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da3919f2-be3b-425e-a2d2-f32403cfd55d",
+              "name": "URL",
+              "value": "https://8b9ae7e6-4fea-4fef-9114-eace90888661.europe-west3-0.gcp.cloud.qdrant.io",
+              "type": "string"
+            },
+            {
+              "id": "f3c1dfb1-c66c-43fd-83ac-99b18996732f",
+              "name": "NAME",
+              "value": "raghibrido",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4860,
+        520
+      ],
+      "id": "bbd5edf8-2f41-4b30-80c4-ddbdaa0d39df",
+      "name": "Set Vars3"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Eres un agente experto en el real decreto y deberás siempre consultar tu base de conocimiento para responder la pregunta con la mayor precisión posible"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        3560,
+        380
+      ],
+      "id": "4b9aa8a2-e5f4-4627-b183-566efe3fce45",
+      "name": "AI Agent2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3460,
+        600
+      ],
+      "id": "b167666e-cbbd-4e54-9a04-997ca9d07f9c",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "rO7izYzCrINKAB8D",
+          "name": "OpenAI Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        3620,
+        640
+      ],
+      "id": "8870179f-45f9-4957-9982-97bb4dfd4d16",
+      "name": "Simple Memory2"
+    },
+    {
+      "parameters": {
+        "description": "Usa esta herramienta para buscar en la base de conocimientos",
+        "workflowId": {
+          "__rl": true,
+          "value": "Lu3DtShdvJZXPN5V",
+          "mode": "list",
+          "cachedResultName": "Pinecone"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('query', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "query"
+          ],
+          "schema": [
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        3800,
+        660
+      ],
+      "id": "2f49947b-9580-4017-9dd7-03800d20f2b7",
+      "name": "Knowledgebase2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Set Vars3').first().json.URL }}/collections/{{ $('Set Vars3').first().json.NAME }}/points/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": {\n    \"prefetch\": [\n      {\n        \"query\": {{ JSON.stringify($('Generate Dense Embeding1').first().json.data[0].embedding || Array(1536).fill(0)) }},\n        \"using\": \"dense\",\n        \"limit\": 100\n      },\n      {\n        \"query\": {\n          \"indices\": {{ JSON.stringify($('Transform Sparse Embedding1').first().json.sparse_vector.sparse.indices || []) }},\n          \"values\": {{ JSON.stringify($('Transform Sparse Embedding1').first().json.sparse_vector.sparse.values || []) }}\n        },\n        \"using\": \"sparse\",\n        \"limit\": 100\n      }\n    ],\n    \"fusion\": {\n      \"rrf\": {}\n    },\n    \"limit\": 10\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5740,
+        520
+      ],
+      "id": "d98ea39c-531e-4b81-8e0a-90328189e0a1",
+      "name": "Query Pinecone1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NEmdgwq7wbdJP9n4",
+          "name": "Header Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($('When Executed by Another Workflow').item.json.query) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5100,
+        520
+      ],
+      "id": "5a7fca57-7502-4110-8611-3159c0aadbcf",
+      "name": "Generate Dense Embeding1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RpdwUddo76tFZgpo",
+          "name": "Header OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/naver/splade-cocondenser-ensembledistil",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": {{ JSON.stringify($('When Executed by Another Workflow').item.json.query + \" [MASK]\") }},\n  \"options\": { \"wait_for_model\": true }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5320,
+        520
+      ],
+      "id": "bf22f913-2a7e-45b5-8655-77a69541e6ce",
+      "name": "Generate Sparse Embeding1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "syEMknDWUmG7jwMW",
+          "name": "Header Hugging Face"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# SUPABASE",
+        "height": 1020,
+        "width": 1440,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2480,
+        -200
+      ],
+      "id": "f85a9ccd-6837-43f0-9380-16be7bc5d9f8",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# PINECONE",
+        "height": 1020,
+        "width": 3060,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -200
+      ],
+      "id": "3c9ee338-9c4c-488e-92d9-02391473d7eb",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# QDRANT",
+        "height": 1020,
+        "width": 3060,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2900,
+        -200
+      ],
+      "id": "af49ec7b-aab1-44a2-85c2-d71e9447f546",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sparseData = $input.first().json; // Objeto con score y token\nconst sparseIndices = sparseData.token ? [sparseData.token] : [];\nconst sparseValues = sparseData.score ? [sparseData.score] : [];\n\nreturn [{\n  json: {\n    sparse_vector: {\n      sparse: {\n        indices: sparseIndices,\n        values: sparseValues\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5520,
+        520
+      ],
+      "id": "d4ff3249-5e9c-406a-b558-e5bcd0cab0bd",
+      "name": "Transform Sparse Embedding1"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL",
+          "mode": "list",
+          "cachedResultName": "RAG Chatbot",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1x0c6m3Q_I_oI01TpSe1gU6eWvUCGd1TL"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2380,
+        1040
+      ],
+      "id": "dffc066e-a410-4c45-9571-6413e062d99d",
+      "name": "Google Drive Trigger3",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2160,
+        1040
+      ],
+      "id": "3554d6a3-7276-4274-8f92-fe441cf2cad1",
+      "name": "Google Drive3",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "D4FoNHhVpGz78Ic4",
+          "name": "Google Drive Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -1940,
+        1040
+      ],
+      "id": "c4df80c7-3fc1-4be9-bcbd-ca50dc6dc2a7",
+      "name": "Extract from File3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://npgtjmzchaxljvpoacgj.supabase.co/functions/v1/hybrid_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wZ3RqbXpjaGF4bGp2cG9hY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4MzI3NzAsImV4cCI6MjA2NTQwODc3MH0.PxoKvhG226rDn9o9wE27f0fmPLndxrF_Z-IlTv0cD-k"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "Functions"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1820,
+        1780
+      ],
+      "id": "e6b381ec-6d76-4da3-923b-cf85f72a0f3d",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.2,
+      "position": [
+        -1740,
+        1040
+      ],
+      "id": "fd215377-8e61-461f-923a-3ca60ba90b0b",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "wA657p4rCM90pyql",
+          "name": "Supabase Video"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1820,
+        1260
+      ],
+      "id": "bf370a1a-8a81-4848-a878-7dc7b5bb90b5",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "rO7izYzCrINKAB8D",
+          "name": "OpenAI Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        -1600,
+        1260
+      ],
+      "id": "6ac65d39-509f-486f-93af-d049b21cb2bf",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -1520,
+        1480
+      ],
+      "id": "598fffb9-d0a7-496f-a8ea-9286283ae096",
+      "name": "Recursive Character Text Splitter1"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Eres un agente experto en el real decreto y deberás siempre consultar tu base de conocimiento para responder la pregunta con la mayor precisión posible.\n\nSolo generarás una respuesta basada en los resultados obtenidos por la base de conocimiento."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -2260,
+        1420
+      ],
+      "id": "6d0f56ff-c1d1-4c28-a4ae-35613abffcc1",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -2400,
+        1620
+      ],
+      "id": "d6ac095b-94a7-4d1d-b3ba-e178c6b96a2a",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "rO7izYzCrINKAB8D",
+          "name": "OpenAI Alejandro"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -2220,
+        1680
+      ],
+      "id": "e9517cab-156f-42c3-b748-aaa1b05338b1",
+      "name": "Simple Memory3"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Llamarás a esta herramienta cuando necesites obtener información de la base de conocimiento",
+        "method": "POST",
+        "url": "https://npgtjmzchaxljvpoacgj.supabase.co/functions/v1/hybrid_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wZ3RqbXpjaGF4bGp2cG9hY2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4MzI3NzAsImV4cCI6MjA2NTQwODc3MH0.PxoKvhG226rDn9o9wE27f0fmPLndxrF_Z-IlTv0cD-k"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        -2020,
+        1640
+      ],
+      "id": "1d1cd250-e255-4bbb-8a18-12bf4c30392f",
+      "name": "Knowledgebase3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a8e1e97-5663-454b-adfd-6cbf79bbdb94",
+              "name": "HOST",
+              "value": "https://video-bipo4oh.svc.aped-4627-b74a.pinecone.io",
+              "type": "string"
+            },
+            {
+              "id": "8f59b37f-8edb-4997-a10d-2d3016dc6151",
+              "name": "NAME",
+              "value": "video",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        1100
+      ],
+      "id": "9ee1525a-557c-48e6-91f6-57b4105dc3b5",
+      "name": "Edit Fields3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Vars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Convert Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Vars": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dense Embedding": {
+      "main": [
+        [
+          {
+            "node": "Generate Sparse Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Sparse Embedding": {
+      "main": [
+        [
+          {
+            "node": "Build Vector Array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Format": {
+      "main": [
+        [
+          {
+            "node": "Generate Dense Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunking": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Vector Array": {
+      "main": [
+        [
+          {
+            "node": "Upsert Vectors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Vectors": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Chunking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dense Embedding1": {
+      "main": [
+        [
+          {
+            "node": "Generate Sparse Embedding1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Vars1": {
+      "main": [
+        [
+          {
+            "node": "Generate Dense Embedding1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Sparse Embedding1": {
+      "main": [
+        [
+          {
+            "node": "Query Pinecone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledgebase": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set Vars3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Google Drive1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledgebase1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger2": {
+      "main": [
+        [
+          {
+            "node": "Set Vars2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive2": {
+      "main": [
+        [
+          {
+            "node": "Extract from File2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Vars2": {
+      "main": [
+        [
+          {
+            "node": "Google Drive2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Chunking1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunking1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Convert Format1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Format1": {
+      "main": [
+        [
+          {
+            "node": "Generate Dense Embeding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dense Embeding": {
+      "main": [
+        [
+          {
+            "node": "Generate Sparse Embeding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Sparse Embeding": {
+      "main": [
+        [
+          {
+            "node": "Build Vector Array1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Vector Array1": {
+      "main": [
+        [
+          {
+            "node": "Upsert Vectors1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Vectors1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Vars3": {
+      "main": [
+        [
+          {
+            "node": "Generate Dense Embeding1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledgebase2": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dense Embeding1": {
+      "main": [
+        [
+          {
+            "node": "Generate Sparse Embeding1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Sparse Embeding1": {
+      "main": [
+        [
+          {
+            "node": "Transform Sparse Embedding1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Sparse Embedding1": {
+      "main": [
+        [
+          {
+            "node": "Query Pinecone1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger3": {
+      "main": [
+        [
+          {
+            "node": "Google Drive3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive3": {
+      "main": [
+        [
+          {
+            "node": "Extract from File3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File3": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledgebase3": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b82f56a7-213d-48d7-80e2-648e0d81e10a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3dd0af70a31fe5617d636be48f186b0cb1837a8d7591f999710c930aa934cdeb"
+  },
+  "id": "Lu3DtShdvJZXPN5V",
+  "tags": []
+}

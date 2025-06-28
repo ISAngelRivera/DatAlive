@@ -1,0 +1,236 @@
+{
+  "name": "DataLive Unified RAG Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "datalive/query",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-receiver",
+      "name": "Query Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "datalive-unified-query"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enrich query with context and metadata\nconst query = $json.query || $json.message;\nconst user_id = $json.user_id || $json.from?.id;\nconst session_id = $json.session_id || `session_${Date.now()}`;\n\n// Detect query characteristics\nconst isTemporalQuery = /\\b(when|date|time|ago|since|before|after|timeline|history)\\b/i.test(query);\nconst isRelationshipQuery = /\\b(connect|relation|partner|owns|works|between|and)\\b/i.test(query);\nconst isFactualQuery = /\\b(what|who|where|how|definition|explain)\\b/i.test(query);\n\n// Prepare enriched request\nconst enrichedRequest = {\n  message: query,\n  user_id: user_id,\n  session_id: session_id,\n  context: {\n    source: 'n8n_workflow',\n    detected_intent: {\n      temporal: isTemporalQuery,\n      relationship: isRelationshipQuery,\n      factual: isFactualQuery\n    },\n    original_request: $json,\n    timestamp: new Date().toISOString()\n  },\n  use_cache: true\n};\n\nreturn enrichedRequest;"
+      },
+      "id": "enrich-context",
+      "name": "Enrich Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://datalive-unified-agent:8058/api/v1/chat",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "unified-agent",
+      "name": "Unified Agent Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process and format response\nconst response = $json;\nconst originalRequest = $('Enrich Context').item(0).json;\n\n// Format response based on detected intent\nlet formattedResponse = {\n  answer: response.response,\n  query: originalRequest.message,\n  confidence: response.confidence,\n  sources: response.sources || [],\n  strategy_used: response.strategy_used || [],\n  processing_time: response.processing_time,\n  cached: response.cached || false,\n  metadata: {\n    session_id: originalRequest.session_id,\n    user_id: originalRequest.user_id,\n    timestamp: new Date().toISOString(),\n    intent_analysis: originalRequest.context.detected_intent\n  }\n};\n\n// Add special formatting for different response types\nif (response.strategy_used?.includes('KAG-Temporal')) {\n  formattedResponse.timeline_data = true;\n  formattedResponse.temporal_insights = \"This response includes temporal analysis\";\n}\n\nif (response.strategy_used?.includes('KAG')) {\n  formattedResponse.relationship_data = true;\n  formattedResponse.graph_insights = \"This response includes relationship analysis\";\n}\n\nif (response.sources?.length > 0) {\n  formattedResponse.source_summary = {\n    total_sources: response.sources.length,\n    document_sources: response.sources.filter(s => s.type === 'document').length,\n    relationship_sources: response.sources.filter(s => s.type === 'relationship').length,\n    temporal_sources: response.sources.filter(s => s.type === 'temporal').length\n  };\n}\n\nreturn formattedResponse;"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.confidence}}",
+              "operation": "smaller",
+              "value2": 0.5
+            }
+          ]
+        }
+      },
+      "id": "confidence-check",
+      "name": "Low Confidence?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle low confidence responses\nconst response = $json;\n\n// Add disclaimer for low confidence\nresponse.answer = `⚠️ **Low Confidence Response** (${(response.confidence * 100).toFixed(1)}%)\\n\\n${response.answer}\\n\\n*Please verify this information as the system has low confidence in this response.*`;\n\nresponse.warning = \"Low confidence response - verification recommended\";\n\nreturn response;"
+      },
+      "id": "low-confidence-handler",
+      "name": "Add Low Confidence Warning",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://datalive-postgres:5432/api/log",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"query\": {{JSON.stringify($json.query)}},\n  \"response_confidence\": {{$json.confidence}},\n  \"strategy_used\": {{JSON.stringify($json.strategy_used)}},\n  \"processing_time\": {{$json.processing_time}},\n  \"cached\": {{$json.cached}},\n  \"user_id\": {{JSON.stringify($json.metadata.user_id)}},\n  \"session_id\": {{JSON.stringify($json.metadata.session_id)}},\n  \"timestamp\": {{JSON.stringify($json.metadata.timestamp)}}\n}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "log-interaction",
+      "name": "Log Interaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json, null, 2)}}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-cache"
+              }
+            ]
+          }
+        }
+      },
+      "id": "send-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Query Webhook": {
+      "main": [
+        [
+          {
+            "node": "Enrich Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Context": {
+      "main": [
+        [
+          {
+            "node": "Unified Agent Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Agent Query": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Low Confidence?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Low Confidence?": {
+      "main": [
+        [
+          {
+            "node": "Add Low Confidence Warning",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Low Confidence Warning": {
+      "main": [
+        [
+          {
+            "node": "Log Interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Interaction": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": {},
+  "meta": {
+    "templateId": "datalive-unified-rag"
+  },
+  "tags": [
+    {
+      "name": "Enterprise RAG",
+      "color": "#007bff"
+    },
+    {
+      "name": "Knowledge Graph",
+      "color": "#28a745"
+    },
+    {
+      "name": "Production",
+      "color": "#dc3545"
+    }
+  ]
+}

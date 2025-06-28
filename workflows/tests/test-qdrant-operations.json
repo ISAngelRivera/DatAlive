@@ -1,0 +1,123 @@
+{
+  "name": "Test Qdrant Operations",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create test vector for Qdrant\nconst testVector = Array.from({length: 768}, () => Math.random() - 0.5);\n\nreturn {\n  collection_name: \"test_collection\",\n  vector_id: Date.now(),\n  vector: testVector,\n  payload: {\n    text: \"Test document for Qdrant\",\n    source: \"test\",\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "prepare-vector",
+      "name": "Prepare Test Vector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "http://qdrant:6333/collections/{{$json.collection_name}}/points",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"points\": [\n    {\n      \"id\": {{$json.vector_id}},\n      \"vector\": {{JSON.stringify($json.vector)}},\n      \"payload\": {{JSON.stringify($json.payload)}}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "insert-vector",
+      "name": "Insert Vector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300],
+      "credentials": {
+        "qdrantApi": {
+          "id": "{{QDRANT_CREDENTIAL_ID}}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/{{$json.collection_name}}/points/search",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"vector\": {{JSON.stringify($json.vector)}},\n  \"limit\": 5,\n  \"with_payload\": true\n}",
+        "options": {}
+      },
+      "id": "search-vector",
+      "name": "Search Vector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300],
+      "credentials": {
+        "qdrantApi": {
+          "id": "{{QDRANT_CREDENTIAL_ID}}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test: Qdrant Operations\nconst insertResult = $input.first().json;\nconst searchResult = $input.last().json;\n\nconst insertSuccess = insertResult.status === 'ok';\nconst searchSuccess = searchResult.result && Array.isArray(searchResult.result);\nconst foundVector = searchSuccess && searchResult.result.length > 0;\n\nreturn {\n  test_name: \"Qdrant Operations\",\n  insert_status: insertSuccess ? \"PASS\" : \"FAIL\",\n  search_status: searchSuccess ? \"PASS\" : \"FAIL\",\n  vector_found: foundVector ? \"PASS\" : \"FAIL\",\n  overall_status: (insertSuccess && searchSuccess && foundVector) ? \"PASS\" : \"FAIL\",\n  details: {\n    insert_response: insertResult,\n    search_results: searchSuccess ? searchResult.result.length : 0,\n    top_score: foundVector ? searchResult.result[0].score : null\n  },\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "test-result",
+      "name": "Test Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Test Vector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Test Vector": {
+      "main": [
+        [
+          {
+            "node": "Insert Vector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Vector": {
+      "main": [
+        [
+          {
+            "node": "Search Vector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Vector": {
+      "main": [
+        [
+          {
+            "node": "Test Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {}
+}

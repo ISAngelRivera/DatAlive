@@ -1,0 +1,58 @@
+# Requirements for DataLive Unified Agent
+# RAG + KAG + CAG + Knowledge Graph
+
+# Core dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# AI/LLM dependencies
+pydantic-ai==0.0.10
+langchain==0.1.0
+langchain-community==0.1.0
+openai==1.9.0
+httpx==0.26.0
+
+# Database dependencies
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+pgvector==0.2.4
+
+# Knowledge Graph dependencies
+neo4j==5.16.0
+graphiti-core==0.2.0
+
+# Cache dependencies
+redis==5.0.1
+aiocache==0.12.2
+
+# Vector/Embedding dependencies
+numpy==1.26.3
+scipy==1.12.0
+scikit-learn==1.4.0
+
+# HTTP/API dependencies
+aiohttp==3.9.1
+requests==2.31.0
+
+# Monitoring dependencies
+prometheus-client==0.19.0
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-instrumentation-fastapi==0.43b0
+
+# Utilities
+python-multipart==0.0.6
+pyyaml==6.0.1
+structlog==24.1.0
+tenacity==8.2.3
+
+# Development dependencies
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+black==23.12.1
+ruff==0.1.11

@@ -1,0 +1,76 @@
+{
+  "name": "Test Ollama Simple",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  text: \"Este es un test de embeddings para DataLive\",\n  test_id: 1\n}];"
+      },
+      "id": "prepare-text",
+      "name": "Prepare Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:v1.5",
+        "prompt": "={{$json.text}}"
+      },
+      "id": "ollama-model",
+      "name": "Ollama Model",
+      "type": "n8n-nodes-base.ollamaModel",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const embedding = $json.embedding;\nconst isArray = Array.isArray(embedding);\nconst dimensions = isArray ? embedding.length : 0;\n\nreturn {\n  test_name: \"Ollama Embeddings Test\",\n  text: $json.text || \"N/A\",\n  has_embedding: isArray,\n  dimensions: dimensions,\n  expected_dimensions: 768,\n  status: (isArray && dimensions === 768) ? \"PASS\" : \"FAIL\",\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "verify-result",
+      "name": "Verify Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [{
+          "node": "Prepare Text",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Prepare Text": {
+      "main": [
+        [{
+          "node": "Ollama Model",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Ollama Model": {
+      "main": [
+        [{
+          "node": "Verify Result",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
