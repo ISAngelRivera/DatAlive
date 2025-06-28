@@ -24,13 +24,18 @@ services:
     environment:
       <<: *common-variables
       N8N_METRICS: true
+      N8N_METRICS_INCLUDE_DEFAULT_METRICS: true
       N8N_RUNNERS_ENABLED: true
-      N8N_SECURE_COOKIE: false
+      N8N_SECURE_COOKIE: true
       N8N_LOG_LEVEL: info
       N8N_VERSION_NOTIFICATIONS_ENABLED: false
       N8N_TEMPLATES_ENABLED: true
       N8N_PERSONALIZATION_ENABLED: false
       N8N_ENCRYPTION_KEY_FILE: /run/secrets/n8n_encryption_key
+      N8N_WEBHOOK_URL: https://n8n.datalive.local
+      N8N_BASIC_AUTH_ACTIVE: true
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-adminpassword}
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_PORT: 5432
@@ -163,24 +168,25 @@ services:
           cpus: '2'
           memory: 4G
 
-  # 5. Knowledge Graph Database - Neo4j (NUEVO)
+  # 5. Knowledge Graph Database - Neo4j (OPTIMIZADO)
   neo4j:
     image: neo4j:5-enterprise
     container_name: datalive-neo4j
     restart: unless-stopped
     ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
+      - "7474:7474"
+      - "7687:7687"
     environment:
       <<: *common-variables
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-adminpassword}
-      NEO4J_PLUGINS: '["graph-data-science", "apoc", "n10s"]'
-      NEO4J_dbms_memory_heap_initial__size: 2G
-      NEO4J_dbms_memory_heap_max__size: 4G
-      NEO4J_dbms_memory_pagecache_size: 2G
+      NEO4J_PLUGINS: '["graph-data-science", "apoc", "n10s", "neosemantics"]'
+      NEO4J_dbms_memory_heap_initial__size: 4G
+      NEO4J_dbms_memory_heap_max__size: 8G
+      NEO4J_dbms_memory_pagecache_size: 4G
       NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
-      NEO4J_dbms_security_procedures_unrestricted: "apoc.*,gds.*"
-      NEO4J_dbms_security_procedures_allowlist: "apoc.*,gds.*"
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*,gds.*,n10s.*"
+      NEO4J_dbms_unmanaged_extension_classes: "n10s.endpoint=/rdf"
+      NEO4J_dbms_connector_bolt_advertised_address: "localhost:7687"
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
@@ -410,6 +416,29 @@ services:
       - monitoring
     depends_on:
       - loki
+
+  # 13. Backup Service - PostgreSQL Automatic Backup
+  backup-service:
+    image: prodrigestivill/postgres-backup-local:latest
+    container_name: datalive-backup
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - SCHEDULE=@daily
+      - BACKUP_KEEP_DAYS=7
+      - BACKUP_KEEP_WEEKS=4
+      - BACKUP_KEEP_MONTHS=6
+    volumes:
+      - ./backups/postgres:/backups
+    networks:
+      - backend
+    secrets:
+      - postgres_password
+    depends_on:
+      - postgres
 
 # Redes
 networks:

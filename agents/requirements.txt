@@ -9,11 +9,13 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
 # AI/LLM dependencies
-pydantic-ai==0.0.10
+pydantic-ai>=0.0.4
 langchain==0.1.0
 langchain-community==0.1.0
 openai==1.9.0
 httpx==0.26.0
+transformers>=4.40.0
+torch>=2.2.0
 
 # Database dependencies
 asyncpg==0.29.0
@@ -22,8 +24,8 @@ sqlalchemy==2.0.25
 pgvector==0.2.4
 
 # Knowledge Graph dependencies
-neo4j==5.16.0
-graphiti-core==0.2.0
+neo4j>=5.20.0
+graphiti-core>=0.3.0
 
 # Cache dependencies
 redis==5.0.1
