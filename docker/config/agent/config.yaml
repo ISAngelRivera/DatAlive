@@ -1,0 +1,116 @@
+# DataLive Unified Agent Configuration
+# Version: 3.0
+# Fecha: 2025-06-28
+
+# Configuración general del agente
+agent:
+  name: "DataLive Unified Agent"
+  version: "3.0"
+  description: "Servicio unificado RAG+KAG+CAG"
+  port: 8058
+  log_level: "INFO"
+  enable_metrics: true
+  metrics_port: 9091
+
+# Configuración de bases de datos
+databases:
+  postgres:
+    host: "postgres"
+    port: 5432
+    database: "${POSTGRES_DB}"
+    user: "${POSTGRES_USER}"
+    password: "adminpassword"
+    
+  neo4j:
+    uri: "bolt://neo4j:7687"
+    user: "neo4j"
+    password: "${NEO4J_PASSWORD:-adminpassword}"
+    database: "neo4j"
+    
+  redis:
+    host: "redis"
+    port: 6379
+    password: "${REDIS_PASSWORD}"
+    db: 0
+    
+  qdrant:
+    url: "http://qdrant:6333"
+    collection_name: "datalive_vectors"
+    vector_size: 768
+
+# Configuración LLM
+llm:
+  provider: "ollama"
+  base_url: "http://ollama:11434/v1"
+  api_key: "ollama"
+  model: "phi-4:latest"
+  temperature: 0.1
+  max_tokens: 4096
+  timeout: 300
+
+# Configuración de embeddings
+embeddings:
+  provider: "ollama"
+  base_url: "http://ollama:11434/v1"
+  api_key: "ollama"
+  model: "nomic-embed-text:v1.5"
+  dimension: 768
+  batch_size: 32
+
+# Configuración RAG
+rag:
+  enabled: true
+  chunk_size: 1024
+  chunk_overlap: 200
+  top_k: 5
+  similarity_threshold: 0.7
+  rerank_enabled: true
+
+# Configuración KAG (Knowledge-Augmented Generation)
+kag:
+  enabled: true
+  knowledge_graph_enabled: true
+  temporal_analysis_enabled: true
+  max_hops: 3
+  relationship_weights:
+    RELATED_TO: 0.5
+    PART_OF: 0.8
+    WORKS_FOR: 0.7
+    USES: 0.6
+    OWNS: 0.9
+
+# Configuración CAG (Contextual-Augmented Generation)
+cag:
+  enabled: true
+  context_window: 8192
+  context_overlap: 512
+  max_context_chunks: 10
+
+# Configuración de monitoreo
+monitoring:
+  prometheus_enabled: true
+  metrics_endpoint: "/metrics"
+  health_endpoint: "/health"
+  
+# Configuración de logging
+logging:
+  level: "INFO"
+  format: "json"
+  file: "/app/logs/agent.log"
+  max_size: "100MB"
+  backup_count: 5
+
+# Configuración de cache
+cache:
+  enabled: true
+  ttl: 3600  # 1 hora
+  max_size: 1000
+  
+# Configuración de seguridad
+security:
+  api_key_required: false
+  cors_enabled: true
+  cors_origins: ["*"]
+  rate_limit:
+    enabled: true
+    requests_per_minute: 100

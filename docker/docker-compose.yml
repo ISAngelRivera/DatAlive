@@ -1,5 +1,6 @@
-# docker-compose.yml - DataLive RAG System v2.0
-# Actualizado con mejores prácticas 2025
+# docker-compose.yml - DataLive Enterprise RAG+KAG System v3.0
+# Sistema unificado RAG+KAG+CAG con Knowledge Graph
+# Última actualización: 2025-06-28
 
 x-common-variables: &common-variables
   TZ: ${TZ:-Europe/Madrid}
@@ -36,7 +37,7 @@ services:
       DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
       DB_POSTGRESDB_USER: ${POSTGRES_USER}
       DB_POSTGRESDB_PASSWORD: adminpassword
-      EXECUTIONS_MODE: queue
+      EXECUTIONS_MODE: regular
       QUEUE_BULL_REDIS_HOST: redis
       QUEUE_BULL_REDIS_PORT: 6379
       QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -54,7 +55,9 @@ services:
       redis:
         condition: service_healthy
       qdrant:
-        condition: service_started
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
     secrets:
       - postgres_password
       - n8n_encryption_key
@@ -102,9 +105,6 @@ services:
         limits:
           cpus: '2'
           memory: 4G
-        reservations:
-          cpus: '1'
-          memory: 1G
 
   # 3. Cache Redis
   redis:
@@ -167,7 +167,43 @@ services:
           cpus: '1'
           memory: 2G
 
-  # 5. LLM & Embeddings Server
+  # 5. Knowledge Graph Database - Neo4j
+  neo4j:
+    image: neo4j:5-enterprise
+    container_name: datalive-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"  # HTTP Browser
+      - "7687:7687"  # Bolt Protocol
+    environment:
+      <<: *common-variables
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-adminpassword}
+      NEO4J_PLUGINS: '["graph-data-science", "apoc", "n10s"]'
+      NEO4J_dbms_memory_heap_initial__size: 2G
+      NEO4J_dbms_memory_heap_max__size: 4G
+      NEO4J_dbms_memory_pagecache_size: 2G
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*,gds.*"
+      NEO4J_dbms_security_procedures_allowlist: "apoc.*,gds.*"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/import
+      - neo4j_plugins:/plugins
+      - ./neo4j-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend
+      - frontend
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "neo4j", "status"]
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 8G
+
+  # 6. LLM & Embeddings Server
   ollama:
     image: ollama/ollama:latest
     container_name: datalive-ollama
@@ -236,7 +272,67 @@ services:
           cpus: '1'
           memory: 2G
 
-  # 7. Prometheus - Métricas
+  # 7. Unified Agent Service - RAG+KAG
+  unified-agent:
+    build:
+      context: ../agents
+      dockerfile: Dockerfile.unified
+    container_name: datalive-unified-agent
+    restart: unless-stopped
+    ports:
+      - "8058:8058"  # API principal
+      - "9091:9091"  # Métricas Prometheus
+    environment:
+      <<: *common-variables
+      # Database connections
+      POSTGRES_URL: postgresql://${POSTGRES_USER}:adminpassword@postgres:5432/${POSTGRES_DB}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-adminpassword}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      QDRANT_URL: http://qdrant:6333
+      # LLM Configuration
+      LLM_PROVIDER: ollama
+      LLM_BASE_URL: http://ollama:11434/v1
+      LLM_API_KEY: ollama
+      LLM_CHOICE: phi-4:latest
+      # Embedding Configuration
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_BASE_URL: http://ollama:11434/v1
+      EMBEDDING_API_KEY: ollama
+      EMBEDDING_MODEL: nomic-embed-text:v1.5
+      # Agent Configuration
+      AGENT_PORT: 8058
+      LOG_LEVEL: INFO
+      ENABLE_METRICS: true
+      PROMETHEUS_PORT: 9091
+    volumes:
+      - agent_data:/app/data
+      - ./config/agent:/app/config:ro
+    networks:
+      - backend
+      - frontend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:8058/health"]
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  # 8. Prometheus - Métricas
   prometheus:
     image: prom/prometheus:latest
     container_name: datalive-prometheus
@@ -273,7 +369,7 @@ services:
       <<: *common-variables
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_password
-      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,neo4j-datasource
       GF_USERS_ALLOW_SIGN_UP: false
       GF_ANALYTICS_REPORTING_ENABLED: false
     volumes:
@@ -285,6 +381,7 @@ services:
       - monitoring
     depends_on:
       - prometheus
+      - neo4j
     secrets:
       - grafana_password
     healthcheck:
@@ -335,6 +432,14 @@ volumes:
     driver: local
   qdrant_data:
     driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  neo4j_import:
+    driver: local
+  neo4j_plugins:
+    driver: local
   ollama_models:
     driver: local
   minio_data:
@@ -344,6 +449,8 @@ volumes:
   grafana_data:
     driver: local
   loki_data:
+    driver: local
+  agent_data:
     driver: local
 
 # Redes

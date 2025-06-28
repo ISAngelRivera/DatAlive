@@ -9,6 +9,7 @@ import json
 
 from neo4j import AsyncGraphDatabase
 from ..core.database import get_neo4j_driver
+from ..core.graphiti_client import GraphitiClient, TemporalQuery, TemporalResult
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,8 @@ class KAGAgent:
     def __init__(self):
         """Initialize KAG agent"""
         self.driver = None
+        self.graphiti_client = GraphitiClient()
+        self._graphiti_initialized = False
         
     async def _get_driver(self):
         """Get Neo4j driver instance"""
@@ -182,6 +185,140 @@ class KAGAgent:
                 'trends': [],
                 'error': str(e)
             }
+    
+    async def temporal_search_with_graphiti(
+        self,
+        query: str,
+        time_range: str = "last_6_months"
+    ) -> Dict[str, Any]:
+        """
+        Enhanced temporal search using Graphiti for advanced time-aware reasoning
+        """
+        try:
+            # Initialize Graphiti if not already done
+            if not self._graphiti_initialized:
+                await self._ensure_graphiti_initialized()
+            
+            # Use Graphiti for temporal analysis
+            if self.graphiti_client.is_available:
+                temporal_result = await self.graphiti_client.temporal_search(
+                    query=query,
+                    time_range=time_range
+                )
+                
+                # Enhance with Neo4j knowledge graph data
+                neo4j_results = await self.temporal_search(query, time_range)
+                
+                # Combine results
+                combined_result = {
+                    'query': query,
+                    'time_range': time_range,
+                    'graphiti_timeline': temporal_result.timeline,
+                    'graphiti_changes': temporal_result.changes,
+                    'graphiti_patterns': temporal_result.patterns,
+                    'graphiti_insights': temporal_result.temporal_insights,
+                    'neo4j_timeline': neo4j_results.get('timeline', []),
+                    'neo4j_trends': neo4j_results.get('trends', []),
+                    'confidence': temporal_result.confidence,
+                    'analysis_method': 'graphiti_enhanced'
+                }
+                
+                logger.info(f"Enhanced temporal search completed for: {query}")
+                return combined_result
+            else:
+                # Fallback to Neo4j only
+                logger.warning("Graphiti not available, using Neo4j temporal search only")
+                result = await self.temporal_search(query, time_range)
+                result['analysis_method'] = 'neo4j_only'
+                return result
+                
+        except Exception as e:
+            logger.error(f"Error in enhanced temporal search: {e}")
+            return {
+                'query': query,
+                'error': str(e),
+                'analysis_method': 'error'
+            }
+    
+    async def analyze_entity_evolution(
+        self,
+        entity_name: str,
+        time_range: str = "last_year"
+    ) -> Dict[str, Any]:
+        """
+        Analyze how an entity has evolved over time using Graphiti
+        """
+        try:
+            if not self._graphiti_initialized:
+                await self._ensure_graphiti_initialized()
+            
+            if self.graphiti_client.is_available:
+                evolution_data = await self.graphiti_client.analyze_evolution(
+                    entity=entity_name,
+                    time_range=time_range
+                )
+                
+                # Enhance with current relationship data from Neo4j
+                current_relationships = await self._get_entity_relationships(entity_name)
+                
+                evolution_data['current_relationships'] = current_relationships
+                evolution_data['analysis_timestamp'] = datetime.now().isoformat()
+                
+                return evolution_data
+            else:
+                logger.warning("Graphiti not available for evolution analysis")
+                return {
+                    'entity': entity_name,
+                    'error': 'Graphiti not available',
+                    'fallback_relationships': await self._get_entity_relationships(entity_name)
+                }
+                
+        except Exception as e:
+            logger.error(f"Error analyzing entity evolution: {e}")
+            return {'entity': entity_name, 'error': str(e)}
+    
+    async def _ensure_graphiti_initialized(self):
+        """Ensure Graphiti client is initialized"""
+        if not self._graphiti_initialized and self.graphiti_client.is_available:
+            success = await self.graphiti_client.initialize()
+            self._graphiti_initialized = success
+            if success:
+                logger.info("✅ Graphiti client initialized for KAG agent")
+            else:
+                logger.warning("⚠️ Failed to initialize Graphiti client")
+    
+    async def _get_entity_relationships(self, entity_name: str) -> List[Dict[str, Any]]:
+        """Get current relationships for an entity from Neo4j"""
+        try:
+            driver = await self._get_driver()
+            
+            cypher_query = """
+            MATCH (e:Entity {name: $entity_name})
+            OPTIONAL MATCH (e)-[r]-(connected)
+            RETURN e, r, connected
+            LIMIT 20
+            """
+            
+            async with driver.session() as session:
+                result = await session.run(cypher_query, entity_name=entity_name)
+                records = await result.data()
+                
+                relationships = []
+                for record in records:
+                    if record['r'] and record['connected']:
+                        relationships.append({
+                            'source': record['e']['name'],
+                            'target': record['connected']['name'],
+                            'type': record['r'].type,
+                            'properties': dict(record['r']),
+                            'direction': 'outgoing'  # Simplified
+                        })
+                
+                return relationships
+                
+        except Exception as e:
+            logger.error(f"Error getting entity relationships: {e}")
+            return []
     
     async def _extract_entities_from_query(self, query: str) -> List[EntityResult]:
         """

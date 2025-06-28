@@ -23,7 +23,15 @@
       "Bash(./scripts/activate-n8n-license.sh:*)",
       "Bash(docker restart:*)",
       "Bash(scripts/init-n8n-setup.sh:*)",
-      "Bash(docker:*)"
+      "Bash(docker:*)",
+      "Bash(bash:*)",
+      "Bash(python3:*)",
+      "Bash(python -m pytest tests/test_system_health.py -v)",
+      "Bash(python test_runner_simple.py:*)",
+      "Bash(python:*)",
+      "Bash(PYTHONPATH=/Users/angelrivera/Desktop/GIT/DatAlive/agents/src python /Users/angelrivera/Desktop/GIT/DatAlive/agents/test_runner_simple.py)",
+      "Bash(find:*)",
+      "Bash(diff:*)"
     ],
     "deny": []
   }
