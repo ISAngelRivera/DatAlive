@@ -1,0 +1,51 @@
+# .gitignore para el Proyecto DataLive
+
+# === Secretos y Configuración de Entorno ===
+# ¡La regla más importante! Nunca subir el fichero .env con secretos.
+#.env
+
+# === Dependencias y Artefactos de Python ===
+# Ignorar el directorio del entorno virtual de Poetry
+.venv/
+# Ignorar los directorios de caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# === Artefactos de Construcción y Distribución ===
+build/
+dist/
+*.egg-info/
+*.egg
+
+# === Logs ===
+# Nunca subir ficheros de log
+*.log
+logs/
+
+# === Ficheros de IDEs y Editores ===
+# Ignorar configuraciones locales de editores comunes
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# === Ficheros del Sistema Operativo ===
+# Ignorar ficheros específicos de macOS, Windows y Linux
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Artefactos de Pruebas ===
+.pytest_cache/
+.coverage
+htmlcov/
+
+# === Ficheros de Claude (opcional, pero buena práctica) ===
+.claude/
+
+# === Código Legado (Opcional) ===
+# Descomenta la siguiente línea si decides que el código legado
+# no debe formar parte del historial de Git principal.
+# _legacy/
