@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  #############################
+  #      CORE DATABASES       #
+  #############################
+  postgres:
+    image: postgres:16-alpine
+    container_name: datalive-postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d # Script de inicialización
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - datalive-net
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: datalive-neo4j
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH}
+      - NEO4J_PLUGINS=["apoc", "graph-data-science"]
+    ports:
+      - "7474:7474" # Interfaz web
+      - "7687:7687" # Bolt
+    volumes:
+      - neo4j-data:/data
+      - ./neo4j-init:/import
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - datalive-net
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: datalive-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - datalive-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: datalive-minio
+    restart: unless-stopped
+    env_file: .env
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Consola web
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - datalive-net
+
+  #############################
+  #      AI & AUTOMATION      #
+  #############################
+  ollama:
+    image: ollama/ollama:latest
+    container_name: datalive-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - datalive-net
+
+  n8n:
+    image: n8nio/n8n
+    container_name: datalive-n8n
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - datalive-net
+
+  n8n-setup:
+    image: alpine/curl:latest
+    container_name: datalive-n8n-setup
+    env_file: .env
+    volumes:
+      - ./scripts:/scripts
+    command: sh /scripts/setup-n8n.sh
+    depends_on:
+      n8n:
+        condition: service_healthy
+    networks:
+      - datalive-net
+    # No restart policy, se ejecuta una vez y termina.
+
+  #############################
+  #     DATALIVE AGENT        #
+  #############################
+  datalive_agent:
+    build:
+      context: ./datalive_agent
+    container_name: datalive-agent
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${DATALIVE_AGENT_PORT}:${DATALIVE_AGENT_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      qdrant:
+        condition: service_started # Qdrant no tiene healthcheck por defecto
+      minio:
+        condition: service_healthy
+      n8n:
+        condition: service_healthy
+      ollama:
+        condition: service_started # Ollama no tiene healthcheck por defecto
+    networks:
+      - datalive-net
+
+  #############################
+  #       OBSERVABILITY       #
+  #############################
+  # Servicios de Loki, Promtail, Prometheus, Grafana (a añadir en la siguiente iteración para no sobrecargar)
+
+networks:
+  datalive-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  neo4j-data:
+  qdrant-data:
+  minio-data:
+  ollama-data:
+  n8n-data:

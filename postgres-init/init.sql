@@ -1,5 +1,5 @@
--- init.sql - DataLive PostgreSQL Schema v2.0
--- Actualizado con mejores prácticas 2025
+-- init.sql - DataLive PostgreSQL Schema v2.1 (Refactorizado por el Arquitecto)
+-- Actualizado con la arquitectura final: Postgres para data relacional, Neo4j para grafos, Qdrant para vectores.
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -9,12 +9,11 @@ CREATE EXTENSION IF NOT EXISTS "btree_gin";
 
 -- Create schemas
 CREATE SCHEMA IF NOT EXISTS rag;
-CREATE SCHEMA IF NOT EXISTS kag;
 CREATE SCHEMA IF NOT EXISTS cag;
 CREATE SCHEMA IF NOT EXISTS monitoring;
 
 -- Set default search path
-SET search_path TO rag, kag, cag, monitoring, public;
+SET search_path TO rag, cag, monitoring, public;
 
 -- =====================================================
 -- RAG Schema - Document and Chunk Management
@@ -54,24 +53,16 @@ CREATE TABLE IF NOT EXISTS rag.chunks (
     content TEXT NOT NULL,
     content_type VARCHAR(50) DEFAULT 'text' CHECK (content_type IN ('text', 'table', 'list', 'code', 'mixed')),
     chunk_metadata JSONB DEFAULT '{}',
-    
-    -- Vector store references
     qdrant_point_id UUID,
     qdrant_collection VARCHAR(100),
     embedding_model VARCHAR(100),
     embedding_dimension INTEGER,
-    
-    -- Multimodal support
-    associated_media JSONB DEFAULT '[]', -- Array of {type, path, minio_object_id}
-    
-    -- Performance optimization
+    associated_media JSONB DEFAULT '[]',
     token_count INTEGER,
     char_count INTEGER,
-    
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     is_deleted BOOLEAN DEFAULT FALSE,
-    
     CONSTRAINT unique_chunk_per_doc UNIQUE(document_id, chunk_index) WHERE is_deleted = FALSE
 );
 
@@ -103,48 +94,8 @@ CREATE INDEX idx_media_document ON rag.media_assets(document_id) WHERE is_delete
 CREATE INDEX idx_media_chunk ON rag.media_assets(chunk_id) WHERE chunk_id IS NOT NULL;
 CREATE INDEX idx_media_hash ON rag.media_assets(media_hash);
 
--- =====================================================
--- KAG Schema - Knowledge Graph
--- =====================================================
-
--- Entities table
-CREATE TABLE IF NOT EXISTS kag.entities (
-    entity_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    entity_type VARCHAR(100) NOT NULL,
-    entity_name TEXT NOT NULL,
-    normalized_name TEXT NOT NULL,
-    properties JSONB DEFAULT '{}',
-    source_references JSONB DEFAULT '[]', -- Array of {document_id, chunk_id}
-    confidence_score FLOAT DEFAULT 1.0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    is_verified BOOLEAN DEFAULT FALSE,
-    is_deleted BOOLEAN DEFAULT FALSE
-);
-
-CREATE INDEX idx_entities_type ON kag.entities(entity_type) WHERE is_deleted = FALSE;
-CREATE INDEX idx_entities_normalized ON kag.entities(normalized_name) WHERE is_deleted = FALSE;
-CREATE INDEX idx_entities_search ON kag.entities USING gin(to_tsvector('english', entity_name));
-
--- Relations table
-CREATE TABLE IF NOT EXISTS kag.relations (
-    relation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    source_entity_id UUID NOT NULL REFERENCES kag.entities(entity_id) ON DELETE CASCADE,
-    target_entity_id UUID NOT NULL REFERENCES kag.entities(entity_id) ON DELETE CASCADE,
-    relation_type VARCHAR(100) NOT NULL,
-    properties JSONB DEFAULT '{}',
-    source_references JSONB DEFAULT '[]',
-    confidence_score FLOAT DEFAULT 1.0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    is_bidirectional BOOLEAN DEFAULT FALSE,
-    is_deleted BOOLEAN DEFAULT FALSE,
-    
-    CONSTRAINT no_self_relation CHECK (source_entity_id != target_entity_id)
-);
-
-CREATE INDEX idx_relations_source ON kag.relations(source_entity_id) WHERE is_deleted = FALSE;
-CREATE INDEX idx_relations_target ON kag.relations(target_entity_id) WHERE is_deleted = FALSE;
-CREATE INDEX idx_relations_type ON kag.relations(relation_type) WHERE is_deleted = FALSE;
+-- [ARQUITECTO] SECCIÓN ELIMINADA: Esquema KAG redundante.
+-- La gestión de entidades y relaciones es responsabilidad exclusiva de Neo4j.
 
 -- =====================================================
 -- CAG Schema - Cache and Query Optimization
@@ -155,21 +106,15 @@ CREATE TABLE IF NOT EXISTS cag.query_cache (
     cache_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     query_hash VARCHAR(64) NOT NULL,
     query_text TEXT NOT NULL,
-    query_embedding FLOAT[] NOT NULL,
     response_data JSONB NOT NULL,
     response_metadata JSONB DEFAULT '{}',
-    
-    -- Performance metrics
     generation_time_ms INTEGER,
     tokens_used INTEGER,
     model_used VARCHAR(100),
-    
-    -- Cache management
     hit_count INTEGER DEFAULT 0,
     last_accessed_at TIMESTAMPTZ DEFAULT NOW(),
     expires_at TIMESTAMPTZ,
     cache_tier VARCHAR(20) DEFAULT 'standard' CHECK (cache_tier IN ('hot', 'standard', 'cold')),
-    
     created_at TIMESTAMPTZ DEFAULT NOW(),
     is_deleted BOOLEAN DEFAULT FALSE
 );
@@ -219,21 +164,14 @@ CREATE TABLE IF NOT EXISTS monitoring.query_logs (
     query_type VARCHAR(50),
     user_id VARCHAR(200),
     session_id VARCHAR(200),
-    
-    -- Performance metrics
     total_time_ms INTEGER,
     llm_time_ms INTEGER,
     retrieval_time_ms INTEGER,
-    
-    -- Results
     results_count INTEGER,
     relevance_score FLOAT,
     user_feedback VARCHAR(20),
-    
-    -- Routing info
     route_taken VARCHAR(20) CHECK (route_taken IN ('cache', 'rag', 'kag', 'hybrid')),
     cache_hit BOOLEAN DEFAULT FALSE,
-    
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -248,18 +186,13 @@ CREATE TABLE IF NOT EXISTS monitoring.sync_operations (
     operation_type VARCHAR(20) NOT NULL CHECK (operation_type IN ('add', 'update', 'delete', 'sync')),
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     completed_at TIMESTAMPTZ,
-    
-    -- Statistics
     files_checked INTEGER DEFAULT 0,
     files_added INTEGER DEFAULT 0,
     files_updated INTEGER DEFAULT 0,
     files_deleted INTEGER DEFAULT 0,
     files_failed INTEGER DEFAULT 0,
-    
-    -- Details
     error_details JSONB DEFAULT '[]',
     sync_metadata JSONB DEFAULT '{}',
-    
     status VARCHAR(20) DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed'))
 );
 
@@ -287,7 +220,7 @@ BEGIN
     FOR t IN 
         SELECT schemaname, tablename 
         FROM pg_tables 
-        WHERE schemaname IN ('rag', 'kag', 'cag') 
+        WHERE schemaname IN ('rag', 'cag', 'monitoring') -- KAG schema removed
         AND EXISTS (
             SELECT 1 FROM information_schema.columns 
             WHERE table_schema = pg_tables.schemaname 
@@ -305,32 +238,9 @@ BEGIN
     END LOOP;
 END $$;
 
--- Function to calculate similarity between embeddings
-CREATE OR REPLACE FUNCTION calculate_cosine_similarity(vec1 FLOAT[], vec2 FLOAT[])
-RETURNS FLOAT AS $$
-DECLARE
-    dot_product FLOAT := 0;
-    norm1 FLOAT := 0;
-    norm2 FLOAT := 0;
-    i INTEGER;
-BEGIN
-    IF array_length(vec1, 1) != array_length(vec2, 1) THEN
-        RETURN NULL;
-    END IF;
-    
-    FOR i IN 1..array_length(vec1, 1) LOOP
-        dot_product := dot_product + (vec1[i] * vec2[i]);
-        norm1 := norm1 + (vec1[i] * vec1[i]);
-        norm2 := norm2 + (vec2[i] * vec2[i]);
-    END LOOP;
-    
-    IF norm1 = 0 OR norm2 = 0 THEN
-        RETURN 0;
-    END IF;
-    
-    RETURN dot_product / (sqrt(norm1) * sqrt(norm2));
-END;
-$$ LANGUAGE 'plpgsql' IMMUTABLE;
+
+-- [ARQUITECTO] SECCIÓN ELIMINADA: Función de similitud de coseno.
+-- Esta funcionalidad es responsabilidad exclusiva de Qdrant.
 
 -- Cache cleanup function
 CREATE OR REPLACE FUNCTION cleanup_expired_cache()
@@ -354,7 +264,6 @@ DECLARE
     deleted_media INTEGER;
     total_deleted INTEGER;
 BEGIN
-    -- Delete chunks for deleted documents
     DELETE FROM rag.chunks 
     WHERE document_id IN (
         SELECT document_id FROM rag.documents 
@@ -363,7 +272,6 @@ BEGIN
     );
     GET DIAGNOSTICS deleted_chunks = ROW_COUNT;
     
-    -- Delete media assets for deleted documents
     DELETE FROM rag.media_assets
     WHERE document_id IN (
         SELECT document_id FROM rag.documents 
@@ -372,7 +280,6 @@ BEGIN
     );
     GET DIAGNOSTICS deleted_media = ROW_COUNT;
     
-    -- Finally delete the documents themselves
     DELETE FROM rag.documents 
     WHERE is_deleted = TRUE 
     AND updated_at < NOW() - INTERVAL '7 days';
@@ -385,52 +292,14 @@ BEGIN
 END;
 $$ LANGUAGE 'plpgsql';
 
--- Track document changes for sync operations
-CREATE OR REPLACE FUNCTION track_document_sync()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Log to sync tracking
-    INSERT INTO monitoring.sync_operations 
-        (source_type, operation_type, files_checked, files_added, files_updated, files_deleted, status, completed_at)
-    VALUES 
-        (NEW.source_type, 
-         CASE 
-            WHEN TG_OP = 'INSERT' THEN 'add'
-            WHEN TG_OP = 'UPDATE' AND NEW.is_deleted AND NOT OLD.is_deleted THEN 'delete'
-            WHEN TG_OP = 'UPDATE' THEN 'update'
-            ELSE 'sync'
-         END,
-         1,
-         CASE WHEN TG_OP = 'INSERT' THEN 1 ELSE 0 END,
-         CASE WHEN TG_OP = 'UPDATE' AND NOT NEW.is_deleted THEN 1 ELSE 0 END,
-         CASE WHEN TG_OP = 'UPDATE' AND NEW.is_deleted THEN 1 ELSE 0 END,
-         'completed',
-         NOW()
-        )
-    ON CONFLICT DO NOTHING;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE 'plpgsql';
-
--- Apply document sync tracking trigger
-CREATE TRIGGER track_document_changes
-AFTER INSERT OR UPDATE ON rag.documents
-FOR EACH ROW
-EXECUTE FUNCTION track_document_sync();
-
 -- =====================================================
 -- Initial Data and Configuration
 -- =====================================================
 
--- Insert default query patterns
 INSERT INTO cag.query_patterns (pattern_regex, pattern_type, optimization_hints) VALUES
     ('^(what|who|when|where|why|how)\s+', 'question', '{"prefer_cache": true, "max_chunks": 3}'::jsonb),
     ('(list|enumerate|show all)', 'enumeration', '{"prefer_kag": true, "expand_relations": true}'::jsonb),
-    ('(compare|difference between|versus)', 'comparison', '{"use_hybrid": true, "parallel_retrieval": true}'::jsonb),
-    ('(latest|recent|current)', 'temporal', '{"prefer_rag": true, "sort_by_date": true}'::jsonb),
-    ('(code|function|api|endpoint)', 'technical', '{"prefer_git_source": true, "include_code_context": true}'::jsonb),
-    ('(terraform|yaml|config)', 'infrastructure', '{"search_iac_files": true, "include_dependencies": true}'::jsonb)
+    ('(compare|difference between|versus)', 'comparison', '{"use_hybrid": true, "parallel_retrieval": true}'::jsonb)
 ON CONFLICT DO NOTHING;
 
 -- Create materialized view for performance dashboard
@@ -448,38 +317,18 @@ GROUP BY hour;
 
 CREATE UNIQUE INDEX idx_performance_summary_hour ON monitoring.performance_summary(hour);
 
--- Create view for document freshness monitoring
-CREATE VIEW monitoring.document_freshness AS
-SELECT 
-    source_type,
-    COUNT(*) as total_documents,
-    COUNT(*) FILTER (WHERE updated_at > NOW() - INTERVAL '1 day') as updated_last_day,
-    COUNT(*) FILTER (WHERE updated_at > NOW() - INTERVAL '7 days') as updated_last_week,
-    COUNT(*) FILTER (WHERE is_deleted = TRUE) as deleted_documents,
-    MAX(updated_at) as last_update
-FROM rag.documents
-GROUP BY source_type;
-
--- Schedule periodic cleanup
-CREATE OR REPLACE FUNCTION schedule_cleanup_job()
-RETURNS void AS $$
-BEGIN
-    -- This would be called by a cron job or N8N workflow
-    PERFORM cleanup_expired_cache();
-    PERFORM cleanup_deleted_documents();
-    REFRESH MATERIALIZED VIEW CONCURRENTLY monitoring.performance_summary;
-END;
-$$ LANGUAGE 'plpgsql';
+-- =====================================================
+-- Permissions
+-- =====================================================
 
 -- Grant appropriate permissions
-GRANT USAGE ON SCHEMA rag, kag, cag, monitoring TO ${POSTGRES_USER};
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA rag, kag, cag, monitoring TO ${POSTGRES_USER};
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA rag, kag, cag, monitoring TO ${POSTGRES_USER};
-
--- =====================================================
--- Partitioning for large tables (optional, for scale)
--- =====================================================
-
--- Example: Partition query_logs by month
--- CREATE TABLE monitoring.query_logs_2025_01 PARTITION OF monitoring.query_logs
--- FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
+-- Asegúrate que la variable de entorno ${POSTGRES_USER} esté disponible durante la ejecución.
+-- Docker-compose lo hace automáticamente si se usa `env_file`.
+DO $$
+BEGIN
+   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${POSTGRES_USER}') THEN
+      GRANT USAGE ON SCHEMA rag, cag, monitoring TO ${POSTGRES_USER};
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA rag, cag, monitoring TO ${POSTGRES_USER};
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA rag, cag, monitoring TO ${POSTGRES_USER};
+   END IF;
+END $$;

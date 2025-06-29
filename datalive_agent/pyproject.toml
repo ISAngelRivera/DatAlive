@@ -1,0 +1,32 @@
+# datalive_agent/pyproject.toml
+
+[tool.poetry]
+name = "datalive-agent"
+version = "0.1.0"
+description = "The core agent for the DataLive Sovereign RAG system."
+authors = ["DataLive Principal Architect"]
+readme = "README.md"
+
+# --- DEPENDENCIAS DE PRODUCCIÓN ---
+# Librerías necesarias para que la aplicación se ejecute.
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.111.0"
+uvicorn = {extras = ["standard"], version = "^0.30.1"}
+pydantic = "^2.8.2"
+pydantic-settings = "^2.3.4"
+# NOTA: Las dependencias de base de datos, IA, etc., se añadirán aquí a medida que se necesiten.
+
+
+# --- DEPENDENCIAS DE DESARROLLO ---
+# Herramientas para pruebas, formateo y análisis de código.
+# No se instalan en la imagen final de producción.
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+requests = "^2.32.3" # Para pruebas de integración de la API
+ruff = "^0.5.1"     # Linter y formateador de código de alto rendimiento
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
