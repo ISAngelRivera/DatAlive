@@ -69,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_chunks_hash ON rag.chunks(chunk_hash);
 CREATE INDEX IF NOT EXISTS idx_chunks_qdrant ON rag.chunks(qdrant_point_id) WHERE qdrant_point_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_chunks_content_search ON rag.chunks USING gin(to_tsvector('english', content));
 
+
 CREATE TABLE IF NOT EXISTS rag.media_assets (
     media_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     document_id UUID NOT NULL REFERENCES rag.documents(document_id) ON DELETE CASCADE,
