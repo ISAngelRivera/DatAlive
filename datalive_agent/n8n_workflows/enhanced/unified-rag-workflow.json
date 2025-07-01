@@ -232,5 +232,8 @@
       "name": "Production",
       "color": "#dc3545"
     }
-  ]
+  ],
+  "active": false,
+  "settings": {},
+  "id": "unified-rag-workflow"
 }

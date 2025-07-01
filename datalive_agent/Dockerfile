@@ -7,6 +7,15 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
+# Instalar compiladores y herramientas de desarrollo necesarias para spacy y otros paquetes
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    g++ \
+    gcc \
+    libc6-dev \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
 # Instalar poetry para una gestión de dependencias robusta
 RUN pip install poetry
 
@@ -38,7 +47,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 COPY ./src ./src
 
 # Exponer el puerto en el que correrá la aplicación
-EXPOSE 8000
+EXPOSE 8058
 
 # Comando para ejecutar la aplicación usando uvicorn
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8058"]

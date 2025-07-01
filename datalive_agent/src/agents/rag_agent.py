@@ -61,7 +61,7 @@ class RAGAgent:
                 embedding=query_embedding,
                 filters=filters,
                 limit=limit,
-                threshold=threshold or settings.VECTOR_SEARCH_THRESHOLD
+                threshold=threshold or settings.default_confidence_threshold
             )
             
             # Process results
@@ -117,7 +117,7 @@ class RAGAgent:
         except Exception as e:
             logger.error(f"Error generating embedding: {e}")
             # Return zero vector as fallback
-            return [0.0] * settings.EMBEDDING_DIMENSIONS
+            return [0.0] * settings.vector_dimension
     
     async def _vector_search(
         self,
@@ -270,7 +270,7 @@ class RAGAgent:
                 rows = await conn.fetch(
                     query,
                     query_embedding,
-                    settings.VECTOR_SEARCH_THRESHOLD,
+                    settings.default_confidence_threshold,
                     limit
                 )
                 

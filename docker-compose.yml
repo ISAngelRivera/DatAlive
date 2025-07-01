@@ -26,14 +26,26 @@ services:
     env_file: .env
     environment:
       - NEO4J_PLUGINS=["apoc", "graph-data-science"]
+      # Enable HTTPS for Safari compatibility  
+      - NEO4J_server_https_enabled=true
+      - NEO4J_server_https_listen__address=0.0.0.0:7473
+      - NEO4J_server_http_enabled=true
+      - NEO4J_server_http_listen__address=0.0.0.0:7474
+      # SSL configuration with self-signed certs
+      - NEO4J_server_https_certificate=/ssl/neo4j.cert
+      - NEO4J_server_https_private__key=/ssl/neo4j.key
+      # Disable strict validation for SSL config
+      - NEO4J_server_config_strict__validation_enabled=false
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "7474:7474"   # HTTP
+      - "7473:7473"   # HTTPS
+      - "7687:7687"   # Bolt
     volumes:
       - neo4j-data:/data
       - ./init-neo4j:/import
+      - ./init-neo4j/ssl:/ssl
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:7474 || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q --no-check-certificate https://localhost:7473 || wget --spider -q http://localhost:7474 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,26 +96,42 @@ services:
     restart: unless-stopped
     ports:
       - "5678:5678"
-    # [CORRECCIÓN] Se usa env_file para cargar TODAS las variables,
-    # incluyendo las nuevas N8N_BASIC_AUTH_*
     env_file:
       - .env
+    # Autenticación básica reactivada - setup completo
     volumes:
       - n8n-data:/home/node/.n8n
-      # Montamos los workflows para poder importarlos manualmente en el POC
       - ./datalive_agent/n8n_workflows:/workflows
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     networks:
       - datalive-net
 
-  # [ELIMINADO] El contenedor init-n8n ya no es necesario para el setup del usuario.
+  # Sidecar container temporal para configuración automática de N8N
+  n8n-setup:
+    image: alpine:latest
+    container_name: datalive-n8n-setup
+    env_file: .env
+    volumes:
+      - ./init-n8n/setup-n8n.sh:/setup-n8n.sh:ro
+      - ./datalive_agent/n8n_workflows:/workflows:ro
+    depends_on:
+      n8n:
+        condition: service_healthy
+    command: >
+      sh -c "
+        apk add --no-cache curl jq &&
+        sh /setup-n8n.sh
+      "
+    networks:
+      - datalive-net
 
   datalive_agent:
     build:

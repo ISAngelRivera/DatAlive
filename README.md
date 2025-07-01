@@ -34,7 +34,27 @@ DataLive es un sistema de Retrieval-Augmented Generation (RAG) de última genera
 - 50GB espacio en disco
 - Ubuntu 22.04+ / Windows 11 con WSL2
 
-### Setup Automático (Recomendado)
+### Setup Ultra-Rápido (Recomendado) 🎯
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/tuusuario/datalive.git
+cd datalive
+
+# 2. Generar configuración automática (¡NUEVO!)
+./scripts/generate-env.sh
+
+# 3. Ejecutar setup completo
+docker-compose up -d
+```
+
+**¡Solo 3 comandos!** El nuevo generador automatiza:
+- 🔐 **Contraseñas seguras**: Auto-generadas (elimina riesgos de seguridad)
+- 🌍 **Detección del sistema**: Zona horaria, puertos disponibles
+- 👤 **Setup mínimo**: Solo email y nombre del administrador
+- ⚡ **Configuración inteligente**: 15 variables automatizadas
+
+### Setup Tradicional (Manual)
 
 ```bash
 # 1. Clonar el repositorio
@@ -46,16 +66,16 @@ cp .env.example .env
 # Editar .env con tus datos (especialmente N8N_USER_EMAIL, passwords, etc.)
 
 # 3. Ejecutar setup completo
-./scripts/setup-datalive.sh
+docker-compose up -d
 ```
 
-¡Eso es todo! El script automatiza:
-- ✅ Creación de secretos
+¡Ambos métodos automatizan completamente:
 - ✅ Configuración de N8N (usuario, licencia, credenciales)
 - ✅ Descarga de modelos Ollama
 - ✅ Creación de buckets MinIO
 - ✅ Inicialización de colecciones Qdrant
 - ✅ Importación de workflows
+- ✅ Certificados SSL para Safari
 
 ### Setup Manual
 
@@ -163,23 +183,36 @@ datalive/
 
 ## 🔧 Configuración
 
-### Variables de Entorno Principales
+### 🎯 Configuración Automática (Recomendada)
 
 ```bash
-# N8N
-N8N_USER_EMAIL=tu@email.com
-N8N_LICENSE_KEY=tu-licencia
-
-# Modelos AI
-OLLAMA_LLM_PRIMARY=phi-4:latest
-OLLAMA_EMBED_TEXT_PRIMARY=nomic-embed-text:v1.5
-
-# Almacenamiento
-MINIO_DEFAULT_BUCKETS=documents,images,embeddings,backups
-QDRANT_COLLECTIONS=documents,images,multimodal
+# Generar configuración completa automáticamente
+./scripts/generate-env.sh
 ```
 
-Ver `.env.example` para la lista completa.
+El script detecta y configura automáticamente:
+- 🔐 **15 contraseñas seguras** (elimina riesgos de seguridad)
+- 🌍 **Zona horaria del sistema**
+- 🔌 **Puertos disponibles**
+- 🔑 **Claves de cifrado únicas**
+
+### 📋 Variables de Entorno Principales
+
+```bash
+# Usuario administrador (único input requerido)
+N8N_USER_EMAIL=tu@email.com
+N8N_USER_FIRSTNAME=TuNombre
+N8N_USER_LASTNAME=TuApellido
+
+# Modelos AI (preconfigurados)
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text:v1.5
+OLLAMA_ROUTER_MODEL=phi3:medium
+
+# Puertos (detectados automáticamente)
+DATALIVE_AGENT_PORT=8058
+```
+
+Ver `docs/ENV_CONF_README.md` para documentación completa de variables.
 
 ## 📊 Monitoreo
 

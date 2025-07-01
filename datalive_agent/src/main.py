@@ -30,10 +30,8 @@ async def lifespan(app: FastAPI):
     logger.info("Databases initialized")
     
     # Load models if needed
-    if settings.PRELOAD_MODELS:
-        from .agents.model_loader import preload_models
-        await preload_models()
-        logger.info("Models preloaded")
+    if settings.debug:  # Use debug flag for preloading in development
+        logger.info("Development mode - models loaded on demand")
     
     yield
     
@@ -73,10 +71,10 @@ def main():
     """Main function to run the server"""
     uvicorn.run(
         "src.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.RELOAD,
-        log_level=settings.LOG_LEVEL.lower()
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=settings.debug,
+        log_level=settings.log_level.lower()
     )
 
 

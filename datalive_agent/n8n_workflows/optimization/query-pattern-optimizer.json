@@ -348,5 +348,8 @@
       "templateId": "query-pattern-optimizer",
       "description": "Analyzes query patterns and pre-caches frequent queries for improved performance"
     },
-    "versionId": "1.0.0"
+    "versionId": "1.0.0",
+    "active": false,
+    "settings": {},
+    "id": "query-pattern-optimizer"
   }

@@ -15,25 +15,25 @@ class EmbeddingClient:
     """Client for generating embeddings"""
     
     def __init__(self):
-        self.base_url = settings.EMBEDDING_BASE_URL
-        self.api_key = settings.EMBEDDING_API_KEY
-        self.model = settings.EMBEDDING_MODEL
+        self.base_url = settings.llm_base_url
+        self.api_key = settings.llm_api_key
+        self.model = settings.embedding_model
         self.client = httpx.AsyncClient(timeout=30.0)
     
     async def embed_text(self, text: str) -> List[float]:
         """Generate embedding for text"""
         try:
-            if settings.EMBEDDING_PROVIDER == "ollama":
+            if settings.embedding_provider == "ollama":
                 return await self._embed_ollama(text)
-            elif settings.EMBEDDING_PROVIDER == "openai":
+            elif settings.embedding_provider == "openai":
                 return await self._embed_openai(text)
             else:
-                raise ValueError(f"Unsupported embedding provider: {settings.EMBEDDING_PROVIDER}")
+                raise ValueError(f"Unsupported embedding provider: {settings.embedding_provider}")
                 
         except Exception as e:
             logger.error(f"Error generating embedding: {e}")
             # Return zero vector as fallback
-            return [0.0] * settings.EMBEDDING_DIMENSIONS
+            return [0.0] * settings.vector_dimension
     
     async def _embed_ollama(self, text: str) -> List[float]:
         """Generate embedding using Ollama"""

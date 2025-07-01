@@ -4,7 +4,8 @@ Configuration settings for DataLive Unified Agent
 
 import os
 from typing import Optional, List
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -14,29 +15,30 @@ class Settings(BaseSettings):
     app_name: str = "DataLive Unified Agent"
     app_version: str = "3.0.0"
     debug: bool = False
+    log_level: str = Field(default="INFO", env="LOG_LEVEL")
     
     # API
     api_host: str = Field(default="0.0.0.0", env="API_HOST")
     api_port: int = Field(default=8058, env="API_PORT")
     api_prefix: str = "/api/v1"
     
-    # Database URLs
+    # Database URLs (using Docker service names)
     postgres_url: str = Field(
-        default="postgresql://postgres:adminpassword@localhost:5432/datalive",
+        default="postgresql://datalive_user:adminpassword@postgres:5432/datalive_db",
         env="POSTGRES_URL"
     )
     neo4j_url: str = Field(
-        default="neo4j://neo4j:adminpassword@localhost:7687",
+        default="neo4j://neo4j:7687",
         env="NEO4J_URL"
     )
     redis_url: str = Field(
-        default="redis://localhost:6379",
+        default="redis://redis:6379",
         env="REDIS_URL"
     )
     
     # Vector database
     qdrant_url: str = Field(
-        default="http://localhost:6333",
+        default="http://qdrant:6333",
         env="QDRANT_URL"
     )
     vector_collection_name: str = "datalive_vectors"
@@ -45,7 +47,7 @@ class Settings(BaseSettings):
     # LLM Configuration
     llm_provider: str = Field(default="ollama", env="LLM_PROVIDER")
     llm_model: str = Field(default="phi-4:latest", env="LLM_MODEL")
-    llm_base_url: str = Field(default="http://localhost:11434", env="LLM_BASE_URL")
+    llm_base_url: str = Field(default="http://ollama:11434", env="LLM_BASE_URL")
     llm_api_key: Optional[str] = Field(default=None, env="LLM_API_KEY")
     
     # Embedding Configuration
@@ -74,7 +76,6 @@ class Settings(BaseSettings):
     # Monitoring
     enable_metrics: bool = True
     metrics_port: int = 9090
-    log_level: str = Field(default="INFO", env="LOG_LEVEL")
     
     # Security
     secret_key: str = Field(

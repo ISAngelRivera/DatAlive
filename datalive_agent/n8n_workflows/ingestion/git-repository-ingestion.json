@@ -264,5 +264,8 @@
     "staticData": null,
     "meta": {
       "templateId": "git-ingestion"
-    }
+    },
+    "active": false,
+    "settings": {},
+    "id": "git-repository-ingestion"
   }

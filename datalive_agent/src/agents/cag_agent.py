@@ -28,11 +28,11 @@ class CAGAgent:
         
         # Cache TTL settings
         self.cache_ttl = {
-            'factual': settings.CACHE_TTL_FACTUAL,
-            'analytical': settings.CACHE_TTL_ANALYTICAL,
-            'temporal': settings.CACHE_TTL_TEMPORAL,
-            'personal': settings.CACHE_TTL_PERSONAL,
-            'general': settings.CACHE_TTL_FACTUAL  # Default
+            'factual': settings.cache_ttl_factual,
+            'analytical': settings.cache_ttl_analytical,
+            'temporal': settings.cache_ttl_temporal,
+            'personal': settings.cache_ttl_personal,
+            'general': settings.cache_ttl_factual  # Default
         }
     
     async def _get_redis_client(self):

@@ -17,7 +17,7 @@ def setup_logging(name: str = None) -> logging.Logger:
     log_dir.mkdir(exist_ok=True)
     
     # Configure logging
-    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
     
     # Create formatter
     formatter = logging.Formatter(

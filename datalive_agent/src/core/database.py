@@ -24,16 +24,16 @@ async def init_databases():
     """Initialize all database connections"""
     await init_postgres()
     await init_neo4j()
-    await init_redis()
-    logger.info("All databases initialized")
+    # await init_redis()  # Redis not configured yet
+    logger.info("Databases initialized")
 
 
 async def close_databases():
     """Close all database connections"""
     await close_postgres()
     await close_neo4j()
-    await close_redis()
-    logger.info("All database connections closed")
+    # await close_redis()  # Redis not configured yet
+    logger.info("Database connections closed")
 
 
 # PostgreSQL
@@ -43,7 +43,7 @@ async def init_postgres():
     
     try:
         _postgres_pool = await asyncpg.create_pool(
-            settings.POSTGRES_URL,
+            settings.postgres_url,
             min_size=2,
             max_size=10,
             command_timeout=60
@@ -84,8 +84,8 @@ async def init_neo4j():
     
     try:
         _neo4j_driver = AsyncGraphDatabase.driver(
-            settings.NEO4J_URI,
-            auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD),
+            settings.neo4j_url,
+            auth=("neo4j", "adminpassword"),
             max_connection_lifetime=3600,
             max_connection_pool_size=50
         )
@@ -124,7 +124,7 @@ async def init_redis():
     
     try:
         _redis_client = redis.from_url(
-            settings.REDIS_URL,
+            settings.redis_url,
             decode_responses=True,
             max_connections=20
         )
