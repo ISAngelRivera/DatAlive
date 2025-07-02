@@ -56,7 +56,7 @@ app.mount("/metrics", metrics_app)
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")
 
-# Health check endpoint
+# Health check endpoints
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -64,6 +64,16 @@ async def health_check():
         "status": "healthy",
         "service": "datalive-unified-agent",
         "version": "3.0.0"
+    }
+
+@app.get("/status") 
+async def status_check():
+    """Status check endpoint for Docker healthcheck"""
+    return {
+        "status": "healthy",
+        "service": "datalive-unified-agent",
+        "version": "3.0.0",
+        "timestamp": "2024-01-01T00:00:00Z"
     }
 
 

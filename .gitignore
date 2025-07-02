@@ -1,51 +1,90 @@
-# .gitignore para el Proyecto DataLive
+# DataLive Production .gitignore
 
-# === Secretos y Configuración de Entorno ===
-# ¡La regla más importante! Nunca subir el fichero .env con secretos.
-#.env
+# Environment and secrets
+.env
+.env.local
+.env.production
+.env.staging
 
-# === Dependencias y Artefactos de Python ===
-# Ignorar el directorio del entorno virtual de Poetry
-.venv/
-# Ignorar los directorios de caché de Python
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# === Artefactos de Construcción y Distribución ===
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
 *.egg-info/
+.installed.cfg
 *.egg
+MANIFEST
 
-# === Logs ===
-# Nunca subir ficheros de log
-*.log
-logs/
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
 
-# === Ficheros de IDEs y Editores ===
-# Ignorar configuraciones locales de editores comunes
+# IDEs
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
+*.swp
+*.swo
+*~
 
-# === Ficheros del Sistema Operativo ===
-# Ignorar ficheros específicos de macOS, Windows y Linux
+# OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-desktop.ini
 
-# === Artefactos de Pruebas ===
-.pytest_cache/
+# Logs
+*.log
+logs/
+log/
+
+# Temporary test files
+test_*.py
+*_test.py
+test_output/
+coverage/
 .coverage
-htmlcov/
+.pytest_cache/
+.tox/
 
-# === Ficheros de Claude (opcional, pero buena práctica) ===
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker volumes (created at runtime)
+postgres-data/
+neo4j-data/
+qdrant-data/
+minio-data/
+ollama-data/
+n8n-data/
+backups/
+
+# Generated documentation
+docs/_build/
+
+# Claude files
 .claude/
 
-# === Código Legado (Opcional) ===
-# Descomenta la siguiente línea si decides que el código legado
-# no debe formar parte del historial de Git principal.
+# Legacy code (kept for reference)
 # _legacy/

@@ -1,7 +1,11 @@
-# docker-compose.yml - v3.7 (N8N Native Setup)
+# docker-compose.yml - DataLive Golden Path Edition
+# Everything runs with `docker-compose up -d` - no additional steps required
 
 services:
-  # ... (postgres, neo4j, qdrant, minio, ollama, datalive_agent se quedan igual)
+  # =============================================================================
+  # Core Database Services
+  # =============================================================================
+  
   postgres:
     image: postgres:16-alpine
     container_name: datalive-postgres
@@ -9,7 +13,6 @@ services:
     env_file: .env
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./init-postgres:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:
@@ -19,6 +22,7 @@ services:
       retries: 5
     networks:
       - datalive-net
+
   neo4j:
     image: neo4j:5-community
     container_name: datalive-neo4j
@@ -26,15 +30,9 @@ services:
     env_file: .env
     environment:
       - NEO4J_PLUGINS=["apoc", "graph-data-science"]
-      # Enable HTTPS for Safari compatibility  
-      - NEO4J_server_https_enabled=true
-      - NEO4J_server_https_listen__address=0.0.0.0:7473
+      - NEO4J_server_https_enabled=false
       - NEO4J_server_http_enabled=true
       - NEO4J_server_http_listen__address=0.0.0.0:7474
-      # SSL configuration with self-signed certs
-      - NEO4J_server_https_certificate=/ssl/neo4j.cert
-      - NEO4J_server_https_private__key=/ssl/neo4j.key
-      # Disable strict validation for SSL config
       - NEO4J_server_config_strict__validation_enabled=false
     ports:
       - "7474:7474"   # HTTP
@@ -42,15 +40,16 @@ services:
       - "7687:7687"   # Bolt
     volumes:
       - neo4j-data:/data
-      - ./init-neo4j:/import
-      - ./init-neo4j/ssl:/ssl
+      - ./init-automated-configs/neo4j/ssl:/ssl:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q --no-check-certificate https://localhost:7473 || wget --spider -q http://localhost:7474 || exit 1"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
       retries: 5
+      start_period: 45s
     networks:
       - datalive-net
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: datalive-qdrant
@@ -59,8 +58,15 @@ services:
       - "6333:6333"
     volumes:
       - qdrant-data:/qdrant/storage
+    # healthcheck:
+    #   test: ["CMD-SHELL", "nc -z localhost 6333 || exit 1"]
+    #   interval: 15s
+    #   timeout: 10s
+    #   retries: 5
+    #   start_period: 30s
     networks:
       - datalive-net
+
   minio:
     image: minio/minio:latest
     container_name: datalive-minio
@@ -79,6 +85,11 @@ services:
       retries: 5
     networks:
       - datalive-net
+
+  # =============================================================================
+  # AI & Processing Services
+  # =============================================================================
+
   ollama:
     image: ollama/ollama:latest
     container_name: datalive-ollama
@@ -87,8 +98,18 @@ services:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
+    # healthcheck:
+    #   test: ["CMD-SHELL", "nc -z localhost 11434 || exit 1"]
+    #   interval: 30s
+    #   timeout: 15s
+    #   retries: 5
+    #   start_period: 60s
     networks:
       - datalive-net
+
+  # =============================================================================
+  # Application Services
+  # =============================================================================
 
   n8n:
     image: n8nio/n8n
@@ -96,12 +117,10 @@ services:
     restart: unless-stopped
     ports:
       - "5678:5678"
-    env_file:
-      - .env
-    # Autenticación básica reactivada - setup completo
+    env_file: .env
     volumes:
       - n8n-data:/home/node/.n8n
-      - ./datalive_agent/n8n_workflows:/workflows
+      - ./datalive_agent/n8n_workflows:/workflows:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,33 +133,15 @@ services:
     networks:
       - datalive-net
 
-  # Sidecar container temporal para configuración automática de N8N
-  n8n-setup:
-    image: alpine:latest
-    container_name: datalive-n8n-setup
-    env_file: .env
-    volumes:
-      - ./init-n8n/setup-n8n.sh:/setup-n8n.sh:ro
-      - ./datalive_agent/n8n_workflows:/workflows:ro
-    depends_on:
-      n8n:
-        condition: service_healthy
-    command: >
-      sh -c "
-        apk add --no-cache curl jq &&
-        sh /setup-n8n.sh
-      "
-    networks:
-      - datalive-net
-
   datalive_agent:
     build:
       context: ./datalive_agent
+      dockerfile: Dockerfile
     container_name: datalive-agent
     restart: unless-stopped
     env_file: .env
     ports:
-      - "${DATALIVE_AGENT_PORT}:${DATALIVE_AGENT_PORT}"
+      - "${DATALIVE_AGENT_PORT:-8058}:8058"
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,12 +155,126 @@ services:
         condition: service_healthy
       ollama:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8058/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
     networks:
       - datalive-net
+
+  # =============================================================================
+  # Initialization Sidecar Containers
+  # =============================================================================
+
+  # PostgreSQL Schema Initialization
+  postgres-init:
+    image: postgres:16-alpine
+    container_name: datalive-postgres-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./init-automated-configs/postgres:/scripts:ro
+      - ./init-automated-configs/postgres/init.sql:/init/init.sql:ro
+    command: /scripts/init.sh
+    networks:
+      - datalive-net
+
+  # Neo4j Knowledge Graph Setup
+  neo4j-init:
+    image: alpine:latest
+    container_name: datalive-neo4j-init
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./init-automated-configs/neo4j:/scripts:ro
+    command: sh -c "apk add --no-cache curl && /scripts/setup.sh"
+    networks:
+      - datalive-net
+
+  # Qdrant Vector Collections Setup
+  qdrant-init:
+    image: alpine:latest
+    container_name: datalive-qdrant-init
+    depends_on:
+      qdrant:
+        condition: service_started
+    volumes:
+      - ./init-automated-configs/qdrant:/scripts:ro
+    command: sh -c "apk add --no-cache curl && /scripts/setup.sh"
+    networks:
+      - datalive-net
+
+  # Ollama Model Download
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: datalive-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_started
+    env_file: .env
+    entrypoint: ["sh", "-c"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    command: |
+      "echo '📥 Downloading LLM model...' && \
+       ollama pull ${LLM_MODEL:-phi3:medium} && \
+       echo '✅ Model downloaded successfully'"
+    networks:
+      - datalive-net
+
+  # N8N Auto-configuration
+  n8n-setup:
+    image: alpine:latest
+    container_name: datalive-n8n-setup
+    depends_on:
+      n8n:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./init-automated-configs/n8n:/scripts:ro
+      - ./datalive_agent/n8n_workflows:/workflows:ro
+    command: sh -c "apk add --no-cache curl jq && /scripts/setup.sh"
+    networks:
+      - datalive-net
+
+  # Final System Health Check
+  healthcheck:
+    image: alpine:latest
+    container_name: datalive-healthcheck
+    depends_on:
+      datalive_agent:
+        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
+      neo4j-init:
+        condition: service_completed_successfully
+      qdrant-init:
+        condition: service_completed_successfully
+      n8n-setup:
+        condition: service_completed_successfully
+    volumes:
+      - ./init-automated-configs/healthcheck:/scripts:ro
+    command: sh -c "apk add --no-cache curl netcat-openbsd jq && /scripts/verify.sh"
+    networks:
+      - datalive-net
+
+# =============================================================================
+# Networks
+# =============================================================================
 
 networks:
   datalive-net:
     driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
 
 volumes:
   postgres-data:

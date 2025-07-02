@@ -36,6 +36,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Instalar curl para healthchecks
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copiar el entorno virtual con las dependencias desde la fase de construcción
 # Ahora este comando encontrará la carpeta /app/.venv porque la línea anterior forzó su creación aquí.
 COPY --from=builder /app/.venv /app/.venv

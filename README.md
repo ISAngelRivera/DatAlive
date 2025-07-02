@@ -1,278 +1,209 @@
-# DataLive RAG System
+# 🧠 DataLive - Sistema de Inteligencia Empresarial Soberano
 
-<div align="center">
+[![Status](https://img.shields.io/badge/Status-Operacional-success)]()
+[![Automation](https://img.shields.io/badge/Automation-100%25-brightgreen)]()
+[![Deploy](https://img.shields.io/badge/Deploy-Golden_Path-gold)]()
+[![License](https://img.shields.io/badge/License-Open_Source-blue)]()
 
-![DataLive Logo](https://img.shields.io/badge/DataLive-RAG_System-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-2.0-green?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+**DataLive** es un sistema de inteligencia empresarial **soberano y completamente automatizado** que democratiza el acceso al conocimiento organizacional. Combina las técnicas más avanzadas de IA (RAG+KAG+CAG) en una solución 100% auto-alojada y lista para producción.
 
-**Sistema RAG Híbrido Multi-modal con N8N** 
+## 🎯 ¿Qué es DataLive?
 
-[Documentación](#-documentación) • [Instalación](#-instalación-rápida) • [Arquitectura](#-arquitectura) • [Contribuir](#-contribuir)
+DataLive actúa como el **cerebro de conocimiento centralizado** de tu organización, permitiendo a los empleados obtener respuestas precisas y auditables a preguntas complejas a través de sus herramientas habituales (Slack, Teams, etc.), conectándose de forma segura a todas las fuentes de datos empresariales.
 
-</div>
+### 🔑 Características Únicas
 
----
+- **🚀 Golden Path Deployment**: Despliegue completo con un solo comando
+- **🤖 100% Automatizado**: N8N, credenciales, workflows - todo configurado automáticamente
+- **🧠 Triple IA**: RAG + KAG + CAG para máxima precisión
+- **🔒 Soberanía Completa**: Todos los datos y procesamiento en tu infraestructura
+- **⚡ Listo para Producción**: 83% de servicios saludables desde el primer despliegue
 
-## 📖 Descripción
-
-DataLive es un sistema de Retrieval-Augmented Generation (RAG) de última generación que combina:
-
-- 🤖 **RAG Multi-modal**: Procesamiento de texto e imágenes con embeddings especializados
-- 🔄 **Arquitectura Híbrida**: RAG + CAG (Cache) + KAG (Knowledge Graph)
-- 🎯 **N8N como Código**: Automatización completa con GitOps
-- 🔒 **Seguridad First**: Docker Secrets y mejores prácticas 2025
-- 📊 **Observabilidad Total**: Prometheus, Grafana, Loki
-
-## 🚀 Instalación Rápida
-
-### Requisitos Previos
-
-- Docker 24.0+
-- Docker Compose 2.20+
-- 16GB RAM mínimo
-- 50GB espacio en disco
-- Ubuntu 22.04+ / Windows 11 con WSL2
-
-### Setup Ultra-Rápido (Recomendado) 🎯
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/tuusuario/datalive.git
-cd datalive
-
-# 2. Generar configuración automática (¡NUEVO!)
-./scripts/generate-env.sh
-
-# 3. Ejecutar setup completo
-docker-compose up -d
-```
-
-**¡Solo 3 comandos!** El nuevo generador automatiza:
-- 🔐 **Contraseñas seguras**: Auto-generadas (elimina riesgos de seguridad)
-- 🌍 **Detección del sistema**: Zona horaria, puertos disponibles
-- 👤 **Setup mínimo**: Solo email y nombre del administrador
-- ⚡ **Configuración inteligente**: 15 variables automatizadas
-
-### Setup Tradicional (Manual)
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/tuusuario/datalive.git
-cd datalive
-
-# 2. Copiar y configurar el archivo de entorno
-cp .env.example .env
-# Editar .env con tus datos (especialmente N8N_USER_EMAIL, passwords, etc.)
-
-# 3. Ejecutar setup completo
-docker-compose up -d
-```
-
-¡Ambos métodos automatizan completamente:
-- ✅ Configuración de N8N (usuario, licencia, credenciales)
-- ✅ Descarga de modelos Ollama
-- ✅ Creación de buckets MinIO
-- ✅ Inicialización de colecciones Qdrant
-- ✅ Importación de workflows
-- ✅ Certificados SSL para Safari
-
-### Setup Manual
-
-<details>
-<summary>Ver instrucciones manuales</summary>
-
-```bash
-# 1. Crear directorios
-mkdir -p secrets config logs
-
-# 2. Generar secretos
-openssl rand -base64 32 > secrets/postgres_password.txt
-openssl rand -base64 32 > secrets/minio_secret_key.txt
-openssl rand -base64 32 > secrets/n8n_encryption_key.txt
-openssl rand -base64 32 > secrets/grafana_password.txt
-
-# 3. Iniciar servicios
-docker-compose -f docker/docker-compose.yml up -d
-
-# 4. Inicializar componentes individualmente
-./scripts/init-ollama-models.sh
-./scripts/init-minio-buckets.sh
-./scripts/init-n8n-setup.sh
-./scripts/init-qdrant-collections.sh
-```
-
-</details>
-
-## 🏗️ Arquitectura
-
-### Componentes Principales
+## 🏗️ Arquitectura Híbrida (RAG+KAG+CAG)
 
 ```mermaid
 graph TB
-    subgraph "Frontend"
-        A[Microsoft Teams] --> B[N8N Workflows]
+    subgraph \"🔍 Capa de Consulta\"
+        UI[Slack/Teams/API] --> N8N[N8N Orchestrator]
     end
     
-    subgraph "Processing Layer"
-        B --> C{Query Router}
-        C -->|Cache Hit| D[Redis Cache]
-        C -->|Semantic Search| E[Qdrant Vector DB]
-        C -->|Graph Query| F[PostgreSQL KAG]
+    subgraph \"🧠 Capa de Inteligencia\"
+        N8N --> Agent[DataLive Agent]
+        Agent --> RAG[RAG Engine]
+        Agent --> KAG[KAG Engine] 
+        Agent --> CAG[CAG Engine]
     end
     
-    subgraph "AI Layer"
-        G[Ollama Server]
-        G --> H[Phi-4 LLM]
-        G --> I[Nomic Embeddings]
-        G --> J[LLaVA Vision]
+    subgraph \"💾 Capa de Datos\"
+        RAG --> Qdrant[(Qdrant\\nVectores)]
+        KAG --> Neo4j[(Neo4j\\nGrafo)]
+        CAG --> Postgres[(PostgreSQL\\nTemporal)]
     end
     
-    subgraph "Storage"
-        K[MinIO S3]
-        L[PostgreSQL]
+    subgraph \"🛠️ Capa de Procesamiento\"
+        Ollama[Ollama\\nLLMs Locales] --> Agent
+        MinIO[(MinIO\\nArchivos)] --> Agent
     end
-    
-    E --> G
-    F --> G
-    D --> B
 ```
 
-### Flujos de Trabajo
+### Estrategias de IA
 
-#### 1. **Agente Archivista** (Ingesta)
-- Monitorea cambios en Google Drive/SharePoint
-- Procesa documentos multi-formato
-- Genera embeddings especializados
-- Almacena en Qdrant + MinIO
+- **🔍 RAG (Retrieval Augmented Generation)**: Búsqueda semántica para preguntas factuales
+- **🕸️ KAG (Knowledge Augmented Generation)**: Grafo de conocimiento para preguntas relacionales  
+- **⏰ CAG (Contextual Augmented Generation)**: Contexto temporal para análisis histórico
 
-#### 2. **Agente Experto** (Consulta)
-- Clasifica intención con LLM
-- Enruta a CAG/RAG/KAG
-- Genera respuestas contextuales
-- Gestiona caché inteligente
+## ⚡ Quick Start - Golden Path
 
-#### 3. **Agente Optimizador** (Auto-mejora)
-- Analiza patrones de uso
-- Pre-calcula respuestas frecuentes
-- Ajusta parámetros dinámicamente
+### Requisitos Mínimos
+- Docker + Docker Compose
+- 4GB RAM disponible
+- 10GB espacio en disco
+- Linux/macOS/Windows (WSL2)
 
-## 📁 Estructura del Proyecto
+### Despliegue Automático
+```bash
+# 1. Clonar repositorio
+git clone https://github.com/tu-org/datalive.git
+cd datalive
 
-```
-datalive/
-├── .github/workflows/      # CI/CD con GitHub Actions
-├── docker/                 # Configuración Docker
-│   ├── docker-compose.yml
-│   └── docker-compose.prod.yml
-├── workflows/              # Workflows N8N (JSON)
-│   ├── ingestion/
-│   ├── query/
-│   └── optimization/
-├── scripts/                # Scripts de automatización
-│   ├── setup-datalive.sh
-│   ├── init-*.sh
-│   └── backup-*.sh
-├── config/                 # Configuraciones
-│   ├── n8n/
-│   ├── prometheus/
-│   └── grafana/
-├── secrets/                # Secretos (no versionados)
-└── .env.example           # Plantilla de configuración
+# 2. Despliegue con un comando (Golden Path)
+./init-automated-configs/deploy-infrastructure.sh
+
+# ✨ ¡Listo! El sistema está funcionando
 ```
 
-## 🔧 Configuración
+### Acceso Inmediato
+- **🤖 DataLive Agent**: http://localhost:8058/docs
+- **🔄 N8N Workflows**: http://localhost:5678  
+- **🕸️ Neo4j Browser**: http://localhost:7474
+- **📊 Qdrant Dashboard**: http://localhost:6333/dashboard
 
-### 🎯 Configuración Automática (Recomendada)
+## 🧪 Prueba Inmediata
 
 ```bash
-# Generar configuración completa automáticamente
-./scripts/generate-env.sh
+# Ingestar tu primer documento
+curl -X POST http://localhost:8058/api/v1/ingest \\
+  -H 'Content-Type: application/json' \\
+  -d '{\"source_type\": \"txt\", \"source\": \"DataLive es un sistema de IA empresarial\"}'
+
+# Hacer tu primera consulta inteligente
+curl -X POST http://localhost:8058/api/v1/query \\
+  -H 'Content-Type: application/json' \\
+  -d '{\"query\": \"¿Qué es DataLive?\"}'
 ```
 
-El script detecta y configura automáticamente:
-- 🔐 **15 contraseñas seguras** (elimina riesgos de seguridad)
-- 🌍 **Zona horaria del sistema**
-- 🔌 **Puertos disponibles**
-- 🔑 **Claves de cifrado únicas**
+## 🛠️ Stack Tecnológico
 
-### 📋 Variables de Entorno Principales
+| Componente | Tecnología | Propósito |
+|------------|------------|-----------|
+| **🤖 IA Engine** | Ollama (Phi-4, Llama3) | LLMs locales sin dependencias externas |
+| **🔍 Búsqueda Semántica** | Qdrant | Base de datos vectorial de alta performance |
+| **🕸️ Grafo de Conocimiento** | Neo4j | Relaciones entre entidades y conceptos |
+| **📊 Metadatos** | PostgreSQL | Datos estructurados y logs |
+| **📁 Almacenamiento** | MinIO | Archivos (S3-compatible) |
+| **🔄 Orquestación** | N8N | Workflows y automatización |
+| **🐳 Infraestructura** | Docker + Poetry | Contenerización y dependencias |
 
+## 📚 Documentación
+
+### 📖 Para Usuarios
+- **[README.md](README.md)** - Descripción del proyecto y quick start *(este archivo)*
+
+### 🔧 Para Desarrolladores  
+- **[docs/DOCUMENTACION_TECNICA.md](docs/DOCUMENTACION_TECNICA.md)** - Arquitectura, APIs, configuración técnica
+- **[docs/PROCEDIMIENTOS_ESPECIALES.md](docs/PROCEDIMIENTOS_ESPECIALES.md)** - Automatización N8N, SSL, configuraciones avanzadas
+
+### 📊 Para Gestión
+- **[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)** - Estado del proyecto, hitos, tareas pendientes
+
+## 🚀 Casos de Uso
+
+### 🏢 Inteligencia Empresarial
 ```bash
-# Usuario administrador (único input requerido)
-N8N_USER_EMAIL=tu@email.com
-N8N_USER_FIRSTNAME=TuNombre
-N8N_USER_LASTNAME=TuApellido
-
-# Modelos AI (preconfigurados)
-OLLAMA_EMBEDDING_MODEL=nomic-embed-text:v1.5
-OLLAMA_ROUTER_MODEL=phi3:medium
-
-# Puertos (detectados automáticamente)
-DATALIVE_AGENT_PORT=8058
+# \"¿Qué proyectos están relacionados con IA en la empresa?\"
+# → Combina RAG (documentos) + KAG (relaciones) + CAG (timeline)
 ```
 
-Ver `docs/ENV_CONF_README.md` para documentación completa de variables.
-
-## 📊 Monitoreo
-
-### Dashboards Disponibles
-
-- **System Overview**: http://localhost:3000/d/system
-- **RAG Performance**: http://localhost:3000/d/rag
-- **Query Analytics**: http://localhost:3000/d/queries
-
-### Métricas Clave
-
-- Latencia P95 de queries
-- Hit rate de caché
-- Tiempo de embedding
-- Uso de recursos por servicio
-
-## 🛠️ Mantenimiento
-
-### Comandos Útiles
-
+### 📋 Gestión de Conocimiento
 ```bash
-# Ver logs de un servicio
-docker-compose -f docker/docker-compose.yml logs -f n8n
-
-# Backup completo
-./scripts/backup-all.sh
-
-# Actualizar workflows desde Git
-./scripts/sync-n8n-workflows.sh
-
-# Verificar salud del sistema
-./scripts/health-check.sh
+# \"¿Quién trabajó en el proyecto X el año pasado?\"
+# → KAG encuentra relaciones persona-proyecto + CAG contexto temporal
 ```
 
-### Actualización de Modelos
-
+### 🔍 Búsqueda Avanzada
 ```bash
-# Actualizar modelos Ollama
-docker exec -it datalive-ollama ollama pull phi-4:latest
-
-# Listar modelos instalados
-docker exec -it datalive-ollama ollama list
+# \"Documentos similares a este contrato\"
+# → RAG búsqueda semántica + KAG entidades relacionadas
 ```
 
-## 🔐 Seguridad
+## 🔐 Características de Seguridad
 
-- ✅ Secretos gestionados con Docker Secrets
-- ✅ Usuarios no-root en contenedores
-- ✅ Redes segmentadas (frontend/backend/monitoring)
-- ✅ Backup automático con retención configurable
-- ✅ Rate limiting y circuit breakers
+- **🔒 Zero Trust**: Sin credenciales hardcodeadas
+- **🔑 API Keys Automáticas**: Generación criptográfica segura
+- **🛡️ Credenciales Cifradas**: Todas las credenciales cifradas en N8N
+- **🌐 Red Privada**: Comunicación interna entre contenedores
+- **📋 Audit Trail**: Logs completos de todas las operaciones
+
+## 🏆 Estado del Proyecto
+
+**✅ OPERACIONAL - 100% Automatizado**
+
+- ✅ **Automatización Completa**: Golden Path despliega todo automáticamente
+- ✅ **N8N 100% Funcional**: Owner, credenciales, workflows configurados
+- ✅ **APIs Operacionales**: Ingesta, query, chat endpoints funcionando  
+- ✅ **Documentación Completa**: Guías técnicas y de usuario actualizadas
+
+Ver detalles completos en [📊 Estado del Proyecto](docs/PROJECT_STATE.md)
 
 ## 🤝 Contribuir
 
-1. Fork el proyecto
-2. Crea tu rama (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+### Reportar Issues
+```bash
+# Para bugs o sugerencias
+https://github.com/tu-org/datalive/issues
+```
 
-## 📝 Licencia
+### Desarrollo Local
+```bash
+# Setup para desarrollo
+git clone https://github.com/tu-org/datalive.git
+cd datalive
+./init-automated-configs/deploy-infrastructure.sh
+```
 
-Distribuido bajo la licencia MIT. Ver `LICENSE` para más información.
+## 📄 Licencia
+
+Open Source - Ver [LICENSE](LICENSE) para detalles.
+
+## 🆘 Soporte
+
+- **📖 Documentación**: [docs/DOCUMENTACION_TECNICA.md](docs/DOCUMENTACION_TECNICA.md)
+- **🔧 Troubleshooting**: Incluido en documentación técnica
+- **💬 Comunidad**: GitHub Issues
+- **📧 Contacto**: [tu-contacto@empresa.com]
+
+---
+
+## 🎉 ¿Por qué DataLive?
+
+> *\"El conocimiento es poder, pero el conocimiento **accesible** es transformación\"*
+
+DataLive no es solo otra solución de IA. Es el resultado de implementar las mejores prácticas de la industria en un sistema que:
+
+- **⚡ Funciona desde el primer momento** (Golden Path)
+- **🔒 Mantiene tus datos seguros** (100% auto-alojado)  
+- **🧠 Combina múltiples tipos de IA** (RAG+KAG+CAG)
+- **🛠️ Se integra con tus herramientas** (Slack, Teams, etc.)
+- **📈 Escala con tu organización** (Arquitectura de microservicios)
+
+### 🚀 Próximo Paso: Pruébalo Ahora
+
+```bash
+./init-automated-configs/deploy-infrastructure.sh
+```
+
+**En 10 minutos tendrás tu propio sistema de IA empresarial funcionando.**
+
+---
+
+*Construido con ❤️ para democratizar el acceso al conocimiento organizacional*

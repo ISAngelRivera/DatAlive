@@ -13,9 +13,10 @@ from pydantic import BaseModel, Field
 import hashlib
 
 from .processors.pdf_processor import PDFProcessor
-from .processors.confluence_processor import ConfluenceProcessor
 from .processors.excel_processor import ExcelProcessor
-from .processors.word_processor import WordProcessor
+from .processors.txt_processor import TXTProcessor
+from .processors.markdown_processor import MarkdownProcessor
+from .processors.csv_processor import CSVProcessor
 from .extractors.entity_extractor import EntityExtractor
 from .extractors.relationship_extractor import RelationshipExtractor
 from ..core.vector_store import VectorStore
@@ -90,9 +91,10 @@ class MultiModalIngestionPipeline:
         # Initialize processors
         self.processors = {
             'pdf': PDFProcessor(),
-            'confluence': ConfluenceProcessor(),
             'excel': ExcelProcessor(),
-            'word': WordProcessor()
+            'txt': TXTProcessor(),
+            'markdown': MarkdownProcessor(),
+            'csv': CSVProcessor()
         }
         
         # Initialize extractors
@@ -346,7 +348,7 @@ class MultiModalIngestionPipeline:
             List of processed documents
         """
         if file_patterns is None:
-            file_patterns = ['*.pdf', '*.docx', '*.xlsx', '*.txt']
+            file_patterns = ['*.pdf', '*.docx', '*.xlsx', '*.txt', '*.md', '*.csv']
         
         logger.info(f"Starting directory ingestion: {directory_path}")
         
@@ -368,6 +370,12 @@ class MultiModalIngestionPipeline:
                 source_type = 'word'
             elif suffix in ['.xlsx', '.xls']:
                 source_type = 'excel'
+            elif suffix == '.txt':
+                source_type = 'txt'
+            elif suffix == '.md':
+                source_type = 'markdown'
+            elif suffix == '.csv':
+                source_type = 'csv'
             else:
                 continue  # Skip unsupported files
             

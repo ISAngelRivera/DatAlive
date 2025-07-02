@@ -19,6 +19,9 @@ except ImportError:
 
 from pydantic import BaseModel
 
+# Import LLM client for advanced relationship extraction
+from ...core.llm import get_llm_model
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +48,7 @@ class RelationshipExtractor:
         self.nlp = None
         self.matcher = None
         self.dep_matcher = None
+        self.llm_model = None
         
         # Relationship patterns
         self.relationship_patterns = {
@@ -98,6 +102,7 @@ class RelationshipExtractor:
         
         self._load_model()
         self._setup_matchers()
+        self._initialize_llm()
     
     def _load_model(self):
         """Load spaCy model"""
@@ -134,6 +139,15 @@ class RelationshipExtractor:
             self.matcher = None
             self.dep_matcher = None
     
+    def _initialize_llm(self):
+        """Initialize LLM model for advanced relationship extraction"""
+        try:
+            self.llm_model = get_llm_model()
+            logger.info("LLM model initialized for relationship extraction")
+        except Exception as e:
+            logger.warning(f"Failed to initialize LLM model: {e}")
+            self.llm_model = None
+    
     async def extract(
         self,
         text: str,
@@ -165,6 +179,10 @@ class RelationshipExtractor:
         
         # Extract based on proximity and co-occurrence
         relationships.extend(await self._extract_proximity_relationships(text, entities, metadata))
+        
+        # Extract using LLM for advanced semantic understanding
+        if self.llm_model:
+            relationships.extend(await self._extract_with_llm(text, entities, metadata))
         
         # Deduplicate relationships
         relationships = await self._deduplicate_relationships(relationships)
@@ -382,6 +400,134 @@ class RelationshipExtractor:
         
         return relationships
     
+    async def _extract_with_llm(
+        self,
+        text: str,
+        entities: List[Dict[str, Any]],
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> List[Relationship]:
+        """Extract relationships using LLM for advanced semantic understanding"""
+        relationships = []
+        
+        if not self.llm_model or len(entities) < 2:
+            return relationships
+        
+        try:
+            # Limit text size for LLM processing
+            text_chunk = text[:4000]  # Keep to manageable size
+            
+            # Create entity list for LLM prompt
+            entity_list = []
+            for entity in entities[:20]:  # Limit to first 20 entities
+                entity_list.append(f"- {entity['name']} ({entity['type']})")
+            
+            entity_str = "\n".join(entity_list)
+            
+            # Prepare prompt for relationship extraction
+            prompt = f"""Analyze the following text and identify relationships between the given entities.
+
+Text:
+{text_chunk}
+
+Entities:
+{entity_str}
+
+Instructions:
+1. Find relationships between these entities in the text
+2. Return ONLY valid relationships that are explicitly mentioned or strongly implied
+3. Use these relationship types: {', '.join(self.get_supported_relationship_types())}
+4. Format each relationship as: SOURCE_ENTITY | RELATIONSHIP_TYPE | TARGET_ENTITY | CONFIDENCE_SCORE (0.0-1.0)
+
+Example format:
+Apple Inc | OWNS | iPhone | 0.9
+John Smith | WORKS_FOR | Microsoft | 0.8
+
+Relationships:"""
+            
+            # Call LLM using pydantic_ai
+            from pydantic_ai import Agent
+            
+            agent = Agent(self.llm_model)
+            result = await agent.run(prompt)
+            response = result.data if hasattr(result, 'data') else str(result)
+            
+            if response and response.strip():
+                # Parse LLM response into relationships
+                relationships.extend(
+                    await self._parse_llm_relationships(response, entities)
+                )
+                
+        except Exception as e:
+            logger.error(f"Error in LLM relationship extraction: {e}")
+        
+        return relationships
+    
+    async def _parse_llm_relationships(
+        self,
+        llm_response: str,
+        entities: List[Dict[str, Any]]
+    ) -> List[Relationship]:
+        """Parse LLM response into Relationship objects"""
+        relationships = []
+        
+        # Create entity lookup for quick access
+        entity_lookup = {}
+        for entity in entities:
+            entity_lookup[entity['name'].lower()] = entity
+            # Also add aliases
+            for alias in entity.get('aliases', []):
+                entity_lookup[alias.lower()] = entity
+        
+        lines = llm_response.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line or '|' not in line:
+                continue
+            
+            try:
+                parts = [part.strip() for part in line.split('|')]
+                if len(parts) < 3:
+                    continue
+                
+                source_name = parts[0]
+                rel_type = parts[1].upper()
+                target_name = parts[2]
+                confidence = float(parts[3]) if len(parts) > 3 else 0.8
+                
+                # Find entities in our entity list
+                source_entity = entity_lookup.get(source_name.lower())
+                target_entity = entity_lookup.get(target_name.lower())
+                
+                if source_entity and target_entity and source_entity['id'] != target_entity['id']:
+                    # Validate relationship type
+                    if rel_type in self.get_supported_relationship_types():
+                        relationship = Relationship(
+                            id=self._generate_relationship_id(
+                                source_entity['id'],
+                                target_entity['id'],
+                                rel_type
+                            ),
+                            source_id=source_entity['id'],
+                            target_id=target_entity['id'],
+                            type=rel_type,
+                            confidence=min(0.95, max(0.5, confidence)),  # Clamp confidence
+                            properties={
+                                'extraction_method': 'llm',
+                                'source_name': source_name,
+                                'target_name': target_name,
+                                'llm_confidence': confidence
+                            }
+                        )
+                        relationships.append(relationship)
+                        
+            except (ValueError, IndexError) as e:
+                logger.debug(f"Failed to parse LLM relationship line '{line}': {e}")
+                continue
+        
+        logger.info(f"Parsed {len(relationships)} relationships from LLM response")
+        return relationships
+    
     def _classify_dependency_relationship(self, token1, token2, doc) -> Optional[str]:
         """Classify relationship based on dependency parsing"""
         dep = token2.dep_.lower()
@@ -501,11 +647,18 @@ class RelationshipExtractor:
     
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check"""
+        extraction_methods = ['pattern', 'proximity']
+        if self.nlp:
+            extraction_methods.append('spacy')
+        if self.llm_model:
+            extraction_methods.append('llm')
+            
         return {
             'status': 'healthy',
             'spacy_available': self.nlp is not None,
+            'llm_available': self.llm_model is not None,
             'model_name': self.model_name if self.nlp else None,
             'pattern_count': sum(len(patterns) for patterns in self.relationship_patterns.values()),
             'supported_types': len(self.get_supported_relationship_types()),
-            'extraction_methods': ['pattern', 'spacy', 'proximity'] if self.nlp else ['pattern', 'proximity']
+            'extraction_methods': extraction_methods
         }
