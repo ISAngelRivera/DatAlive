@@ -1,10 +1,15 @@
 #!/bin/sh
 # DataLive Final Health Check Script
 # Runs after all services are initialized
+# Automatically runs appropriate tests based on TEST_MODE
 
 set -e
 
+# Get test mode from environment (default: quick)
+TEST_MODE="${TEST_MODE:-quick}"
+
 echo "🔍 DataLive System Health Check Starting..."
+echo "Test Mode: $TEST_MODE"
 echo "=================================================="
 
 # Configuration
@@ -15,6 +20,9 @@ MINIO_HOST="${MINIO_HOST:-minio}"
 OLLAMA_HOST="${OLLAMA_HOST:-ollama}"
 N8N_HOST="${N8N_HOST:-n8n}"
 AGENT_HOST="${DATALIVE_AGENT_HOST:-datalive_agent}"
+REDIS_HOST="${REDIS_HOST:-redis}"
+PROMETHEUS_HOST="${PROMETHEUS_HOST:-prometheus}"
+GRAFANA_HOST="${GRAFANA_HOST:-grafana}"
 
 # Colors for output (if terminal supports it)
 GREEN='\033[0;32m'
@@ -68,6 +76,15 @@ check_service "N8N" "curl -s -f http://$N8N_HOST:5678/healthz"
 
 # 7. DataLive Agent
 check_service "DataLive Agent" "curl -s -f http://$AGENT_HOST:8058/health"
+
+# 8. Redis
+check_service "Redis" "nc -z $REDIS_HOST 6379"
+
+# 9. Prometheus
+check_service "Prometheus" "curl -s -f http://$PROMETHEUS_HOST:9090/-/healthy"
+
+# 10. Grafana
+check_service "Grafana" "curl -s -f http://$GRAFANA_HOST:3000/api/health"
 
 echo ""
 echo "🔌 Checking API Endpoints..."
@@ -151,6 +168,45 @@ echo ""
 if [ $SUCCESS_RATE -eq 100 ]; then
     echo -e "${GREEN}✅ ALL SYSTEMS OPERATIONAL!${NC}"
     echo ""
+    
+    # Run additional tests based on TEST_MODE
+    case "$TEST_MODE" in
+        "full"|"comprehensive")
+            echo "🧪 Running comprehensive test suite..."
+            if [ -f ./run-tests.sh ]; then
+                ./run-tests.sh full
+            fi
+            if [ -f ./test-suite.py ]; then
+                python3 ./test-suite.py
+            fi
+            ;;
+        "security")
+            echo "🔒 Running security tests..."
+            if [ -f ./run-tests.sh ]; then
+                ./run-tests.sh security
+            fi
+            if [ -f ./test-api-key.py ]; then
+                python3 ./test-api-key.py
+            fi
+            ;;
+        "performance")
+            echo "⚡ Running performance tests..."
+            if [ -f ./run-tests.sh ]; then
+                ./run-tests.sh performance
+            fi
+            if [ -f ./test-redis-cache.py ]; then
+                python3 ./test-redis-cache.py
+            fi
+            ;;
+        "quick"|*)
+            echo "⚡ Running quick validation tests..."
+            if [ -f ./quick-test.sh ]; then
+                ./quick-test.sh
+            fi
+            ;;
+    esac
+    
+    echo ""
     echo "🎉 DataLive is ready for use!"
     echo ""
     echo "📡 Access Points:"
@@ -159,6 +215,8 @@ if [ $SUCCESS_RATE -eq 100 ]; then
     echo "   • Neo4j Browser: http://localhost:7474"
     echo "   • Qdrant Dashboard: http://localhost:6333/dashboard"
     echo "   • MinIO Console: http://localhost:9001"
+    echo "   • Grafana Monitoring: http://localhost:3000"
+    echo "   • Prometheus Metrics: http://localhost:9090"
     echo ""
     echo "🚀 Quick Start:"
     echo "   curl -X POST http://localhost:8058/api/v1/ingest \\"

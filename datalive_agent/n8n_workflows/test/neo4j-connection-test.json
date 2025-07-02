@@ -1,0 +1,153 @@
+{
+  "name": "Neo4j Connection Test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1a8e0d40-7b4c-4b65-8b3e-f0a2c9e1d2f3",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "query": "MATCH (n) RETURN count(n) as node_count",
+        "options": {}
+      },
+      "id": "2b9f1e50-8c5d-5c76-9c4f-g1b3d0f2e4g5",
+      "name": "Test Neo4j Connection",
+      "type": "@kurea/n8n-nodes-neo4j.neo4j",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "neo4j": {
+          "id": "{{$credential.DataLive Neo4j.id}}",
+          "name": "DataLive Neo4j"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.node_count }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "3c0g2f60-9d6e-6d87-ad5g-h2c4e1g3f5h6",
+      "name": "Check Result",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "message": "✅ Neo4j Connection Successful! Node count: {{ $json.node_count }}",
+        "options": {}
+      },
+      "id": "4d1h3g70-ae7f-7e98-be6h-i3d5f2h4g6i7",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "message": "❌ Neo4j Connection Failed",
+        "options": {}
+      },
+      "id": "5e2i4h80-bf8g-8f09-cf7i-j4e6g3i5h7j8",
+      "name": "Failed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Test Neo4j Connection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Neo4j Connection": {
+      "main": [
+        [
+          {
+            "node": "Check Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Result": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "neo4j-test-workflow",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "createdAt": "2025-07-02T00:00:00.000Z",
+      "updatedAt": "2025-07-02T00:00:00.000Z",
+      "id": "test",
+      "name": "test"
+    }
+  ]
+}

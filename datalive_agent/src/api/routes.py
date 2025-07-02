@@ -3,10 +3,11 @@ API routes for DataLive Unified Agent
 """
 
 import logging
+import os
 from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Header, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -28,6 +29,14 @@ logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter()
+
+
+async def verify_api_key(x_api_key: str = Header(...)):
+    """Verify API key for protected endpoints"""
+    expected_key = os.getenv("DATALIVE_API_KEY", "datalive-dev-key-change-in-production")
+    if not expected_key or x_api_key != expected_key:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+    return True
 
 # Initialize agents (will be done properly in dependency injection)
 _unified_agent: Optional[UnifiedAgent] = None
@@ -144,7 +153,7 @@ class QueryResponse(BaseModel):
 
 # Routes
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(request: ChatRequest, _: bool = Depends(verify_api_key)) -> ChatResponse:
     """
     Process a chat query and return response
     """
@@ -158,9 +167,9 @@ async def chat(request: ChatRequest) -> ChatResponse:
             use_cache=request.use_cache
         )
         
-        # Get unified agent and process query
+        # Get unified agent and process query (using optimized version)
         agent = await get_unified_agent()
-        result = await agent.process_query(query_request)
+        result = await agent.process_query_optimized(query_request)
         
         # Convert to response format
         return ChatResponse(
@@ -178,7 +187,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, _: bool = Depends(verify_api_key)):
     """
     Process a chat query with streaming response
     """
@@ -206,7 +215,8 @@ async def chat_stream(request: ChatRequest):
 async def vector_search(
     query: str,
     limit: int = 10,
-    threshold: float = 0.7
+    threshold: float = 0.7,
+    _: bool = Depends(verify_api_key)
 ):
     """
     Perform vector search only
@@ -229,7 +239,8 @@ async def vector_search(
 async def knowledge_graph_search(
     query: str,
     max_depth: int = 3,
-    limit: int = 20
+    limit: int = 20,
+    _: bool = Depends(verify_api_key)
 ):
     """
     Perform knowledge graph search only
@@ -251,7 +262,8 @@ async def knowledge_graph_search(
 @router.get("/search/temporal")
 async def temporal_search(
     query: str,
-    time_range: str = "last_6_months"
+    time_range: str = "last_6_months",
+    _: bool = Depends(verify_api_key)
 ):
     """
     Perform temporal search
@@ -285,7 +297,7 @@ async def cache_stats():
 
 
 @router.delete("/cache/invalidate")
-async def invalidate_cache(pattern: str = "*"):
+async def invalidate_cache(pattern: str = "*", _: bool = Depends(verify_api_key)):
     """
     Invalidate cache entries
     """
@@ -349,7 +361,7 @@ async def metrics_summary():
 # New DataLive Core Endpoints
 
 @router.post("/ingest", response_model=IngestResponse)
-async def ingest_document(request: IngestRequest) -> IngestResponse:
+async def ingest_document(request: IngestRequest, _: bool = Depends(verify_api_key)) -> IngestResponse:
     """
     Ingest a document into the DataLive system
     
@@ -392,7 +404,8 @@ async def ingest_document(request: IngestRequest) -> IngestResponse:
 @router.post("/ingest/file")
 async def ingest_file(
     file: UploadFile = File(...),
-    source_type: Optional[str] = None
+    source_type: Optional[str] = None,
+    _: bool = Depends(verify_api_key)
 ) -> IngestResponse:
     """
     Ingest a file upload into the DataLive system
@@ -455,7 +468,8 @@ async def ingest_directory(
     directory_path: str,
     file_patterns: Optional[List[str]] = None,
     recursive: bool = True,
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    _: bool = Depends(verify_api_key)
 ) -> Dict[str, Any]:
     """
     Ingest all supported files from a directory
@@ -512,7 +526,7 @@ async def ingest_directory(
 
 
 @router.post("/query", response_model=QueryResponse)
-async def query_documents(request: QueryRequest) -> QueryResponse:
+async def query_documents(request: QueryRequest, _: bool = Depends(verify_api_key)) -> QueryResponse:
     """
     Query the DataLive knowledge base using RAG+KAG+CAG
     """
@@ -530,9 +544,9 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
             use_cache=request.use_cache
         )
         
-        # Get unified agent and process query
+        # Get unified agent and process query (using optimized version)
         agent = await get_unified_agent()
-        result = await agent.process_query(unified_request)
+        result = await agent.process_query_optimized(unified_request)
         
         # Enhanced response with more details
         return QueryResponse(

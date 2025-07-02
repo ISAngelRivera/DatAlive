@@ -84,6 +84,14 @@ class Settings(BaseSettings):
     )
     allowed_origins: List[str] = ["*"]
     
+    # Cache Configuration
+    cache_ttl_factual: int = Field(default=3600, env="CACHE_TTL_FACTUAL")      # 1 hour
+    cache_ttl_analytical: int = Field(default=1800, env="CACHE_TTL_ANALYTICAL") # 30 minutes  
+    cache_ttl_temporal: int = Field(default=900, env="CACHE_TTL_TEMPORAL")      # 15 minutes
+    cache_ttl_personal: int = Field(default=300, env="CACHE_TTL_PERSONAL")      # 5 minutes
+    cache_max_size: int = Field(default=1000, env="CACHE_MAX_SIZE")
+    cache_high_confidence_threshold: float = Field(default=0.9, env="CACHE_HIGH_CONFIDENCE_THRESHOLD")
+    
     # Feature flags
     enable_graphiti: bool = Field(default=True, env="ENABLE_GRAPHITI")
     enable_temporal_analysis: bool = Field(default=True, env="ENABLE_TEMPORAL_ANALYSIS")

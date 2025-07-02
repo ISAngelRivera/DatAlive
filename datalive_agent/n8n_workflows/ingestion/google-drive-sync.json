@@ -1,0 +1,315 @@
+{
+  "name": "Google Drive Document Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "options": {
+          "maxResults": 50,
+          "query": "mimeType='application/vnd.google-apps.document' or mimeType='application/pdf' or mimeType='text/plain'"
+        }
+      },
+      "id": "b2c3d4e5-f6g7-8901-2345-678901bcdefg",
+      "name": "List Drive Files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "name": "DataLive Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.modifiedTime }}",
+              "rightValue": "={{ $now.minus({hours: 2}).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "c3d4e5f6-g7h8-9012-3456-789012cdefgh",
+      "name": "Filter Recent Changes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "txt"
+            }
+          }
+        }
+      },
+      "id": "d4e5f6g7-h8i9-0123-4567-890123defghi",
+      "name": "Download File Content",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 1,
+      "position": [
+        900,
+        200
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "name": "DataLive Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://datalive_agent:8058/api/v1/ingest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.DATALIVE_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"source_type\": \"txt\",\n  \"source\": \"{{ $binary.data.toString('utf8') }}\",\n  \"metadata\": {\n    \"title\": \"{{ $('Download File Content').item.json.name }}\",\n    \"source\": \"google_drive\",\n    \"file_id\": \"{{ $('Download File Content').item.json.id }}\",\n    \"modified_time\": \"{{ $('Download File Content').item.json.modifiedTime }}\",\n    \"owner\": \"{{ $('Download File Content').item.json.owners[0].displayName }}\",\n    \"mime_type\": \"{{ $('Download File Content').item.json.mimeType }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "e5f6g7h8-i9j0-1234-5678-901234efghij",
+      "name": "Send to DataLive Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1120,
+        200
+      ],
+      "credentials": {
+        "httpRequestAuth": {
+          "name": "DataLive Agent API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "f6g7h8i9-j0k1-2345-6789-012345fghijk",
+      "name": "Check Ingestion Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "message": "✅ Successfully ingested: {{ $('Download File Content').item.json.name }}",
+        "options": {}
+      },
+      "id": "g7h8i9j0-k1l2-3456-7890-123456ghijkl",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "message": "❌ Failed to ingest: {{ $('Download File Content').item.json.name }} - Error: {{ $json.error }}",
+        "options": {}
+      },
+      "id": "h8i9j0k1-l2m3-4567-8901-234567hijklm",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "message": "ℹ️ No recent changes found in Google Drive",
+        "options": {}
+      },
+      "id": "i9j0k1l2-m3n4-5678-9012-345678ijklmn",
+      "name": "No Changes",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "List Drive Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Drive Files": {
+      "main": [
+        [
+          {
+            "node": "Filter Recent Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Recent Changes": {
+      "main": [
+        [
+          {
+            "node": "Download File Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File Content": {
+      "main": [
+        [
+          {
+            "node": "Send to DataLive Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to DataLive Agent": {
+      "main": [
+        [
+          {
+            "node": "Check Ingestion Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Ingestion Success": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "google-drive-sync",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "createdAt": "2025-07-02T00:00:00.000Z",
+      "updatedAt": "2025-07-02T00:00:00.000Z",
+      "id": "ingestion",
+      "name": "ingestion"
+    },
+    {
+      "createdAt": "2025-07-02T00:00:00.000Z",
+      "updatedAt": "2025-07-02T00:00:00.000Z",
+      "id": "google-drive",
+      "name": "google-drive"
+    }
+  ]
+}

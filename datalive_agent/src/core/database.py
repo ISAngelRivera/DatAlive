@@ -24,7 +24,7 @@ async def init_databases():
     """Initialize all database connections"""
     await init_postgres()
     await init_neo4j()
-    # await init_redis()  # Redis not configured yet
+    await init_redis()
     logger.info("Databases initialized")
 
 
@@ -32,7 +32,7 @@ async def close_databases():
     """Close all database connections"""
     await close_postgres()
     await close_neo4j()
-    # await close_redis()  # Redis not configured yet
+    await close_redis()
     logger.info("Database connections closed")
 
 

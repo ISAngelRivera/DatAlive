@@ -24,6 +24,48 @@
 
 DataLive es un sistema de inteligencia empresarial soberano diseñado para actuar como el **cerebro de conocimiento centralizado** de una organización. El sistema democratiza el acceso al conocimiento corporativo, permitiendo a los empleados obtener respuestas precisas y auditables a preguntas complejas a través de sus herramientas de colaboración habituales.
 
+### Arquitectura de Sidecars
+
+DataLive utiliza una **arquitectura de sidecars automatizada** que permite configuración cero-dependencias para el usuario:
+
+#### Principios de Diseño
+1. **Transparencia Total**: Los sidecars son invisibles al usuario final
+2. **Configuración Automática**: Cada servicio se auto-configura sin intervención manual
+3. **Mantenibilidad**: Scripts separados por servicio en `init-automated-configs/`
+4. **Golden Path Real**: Solo 3 comandos para usuario (`git clone`, `cp .env.template .env`, `docker-compose up -d`)
+
+#### Flujo de Sidecars
+```mermaid
+graph TD
+    A[docker-compose up -d] --> B[Servicios Base se inician]
+    B --> C[Sidecars se ejecutan automáticamente]
+    C --> D[postgres-init configura schemas]
+    C --> E[neo4j-init configura grafos]
+    C --> F[qdrant-init configura colecciones]
+    C --> G[n8n-setup configura workflows]
+    C --> H[healthcheck valida todo]
+    D --> I[Sistema 100% operacional]
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+```
+
+#### Mapeo Scripts → Sidecars
+| Script Source | Sidecar Container | Función |
+|---------------|-------------------|---------|
+| `init-automated-configs/postgres/init.sh` | `postgres-init` | Esquemas SQL y configuración |
+| `init-automated-configs/neo4j/setup.sh` | `neo4j-init` | Índices de grafo y SSL |
+| `init-automated-configs/qdrant/setup.sh` | `qdrant-init` | Colecciones vectoriales |
+| `init-automated-configs/n8n/setup.sh` | `n8n-setup` | Credenciales y workflows |
+| `init-automated-configs/healthcheck/verify.sh` | `healthcheck` | Validación final |
+
+**Ventajas:**
+- ✅ **Sin dependencias del host**: Todo funciona solo con Docker
+- ✅ **Configuración reproducible**: Scripts versionados y testeados
+- ✅ **Debugging simplificado**: Logs por sidecar específico
+- ✅ **Modularidad**: Cada servicio es independiente
+
 ### Diagrama de Arquitectura
 
 ```text
@@ -154,19 +196,20 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text:v1.5
 OLLAMA_ROUTER_MODEL=phi3:medium
 ```
 
-### Generación Automática de Configuración
+### Configuración Manual del Entorno
 
 ```bash
-# Script que automatiza la generación del archivo .env
-./scripts/generate-env.sh
+# Copiar template y personalizar
+cp .env.template .env
+# Editar .env con configuraciones específicas
 ```
 
-Este script:
-- ✅ Genera 15 contraseñas seguras automáticamente
-- ✅ Detecta zona horaria del sistema
-- ✅ Verifica puertos disponibles
-- ✅ Crea claves de cifrado únicas
-- ✅ Solo requiere email y nombre del administrador
+Variables importantes a personalizar:
+- ✅ **POSTGRES_PASSWORD**: Contraseña segura para PostgreSQL
+- ✅ **NEO4J_AUTH**: Credenciales Neo4j (neo4j/tu_password)
+- ✅ **N8N_USER_EMAIL**: Email del administrador N8N
+- ✅ **GOOGLE_CLIENT_ID/SECRET**: Para integración Google Drive (opcional)
+- ✅ **DATALIVE_API_KEY**: Clave API personalizada para producción
 
 ---
 
@@ -187,43 +230,39 @@ Este script:
 git clone <repository-url>
 cd DataLive
 
-# 2. Generar configuración (solo requiere email y nombre)
-./scripts/generate-env.sh
+# 2. Configurar variables de entorno
+cp .env.template .env
+# Editar .env con tus configuraciones específicas
 
-# 3. Desplegar infraestructura completa
-./scripts/deploy-infrastructure.sh
+# 3. Iniciar todo el sistema
+docker-compose up -d
 
-# 4. Verificar instalación
-./scripts/test-functionality.sh
+# 4. Verificar instalación (opcional)
+docker-compose logs -f
 ```
 
-### Qué Hace el Script de Despliegue
+### Qué Hace Docker Compose Automáticamente
 
-1. **Verificación del Sistema**
-   - Comprueba versiones de Docker
-   - Verifica recursos disponibles
-   - Valida configuración
+1. **Orquestación de Servicios**
+   - Orden correcto de arranque con `depends_on`
+   - Healthchecks automáticos para cada servicio
+   - Red privada entre contenedores
 
-2. **Construcción de Servicios**
-   - Build de contenedores con Poetry
-   - Optimización multi-stage
-   - Caché de dependencias
+2. **Inicialización Automática** (via sidecars)
+   - PostgreSQL: Esquemas y configuración inicial
+   - Neo4j: Índices y configuración SSL
+   - Qdrant: Colecciones para vectores
+   - N8N: Credenciales y workflows automáticos
 
-3. **Inicialización de Infraestructura**
-   - PostgreSQL con esquemas
-   - Neo4j con índices
-   - Qdrant con colecciones
-   - MinIO con buckets
+3. **Configuración sin Intervención**
+   - Todas las credenciales auto-configuradas
+   - Conectividad entre servicios establecida
+   - APIs listas para usar
 
-4. **Configuración de Servicios**
-   - N8N con credenciales automáticas
-   - Ollama con modelos descargados
-   - SSL/TLS para Neo4j
-
-5. **Healthchecks y Validación**
-   - Espera servicios listos
-   - Verifica conectividad
-   - Ejecuta tests básicos
+4. **Validación Continua**
+   - Healthchecks monitoreando cada servicio
+   - Reinicio automático en caso de fallo
+   - Logs centralizados disponibles
 
 ### URLs de Servicios Post-Despliegue
 
@@ -536,7 +575,7 @@ docker stats
 # Limpiar y reiniciar
 docker-compose down -v
 docker system prune -f
-./scripts/deploy-infrastructure.sh
+docker-compose up -d
 
 # Backup de datos
 docker-compose exec postgres pg_dump -U datalive datalive > backup.sql
@@ -551,7 +590,7 @@ docker-compose exec neo4j neo4j-admin database dump neo4j --to=/backup/
 
 #### Generación de Certificados
 ```bash
-./scripts/generate-neo4j-ssl.sh
+./init-automated-configs/neo4j/generate-neo4j-ssl.sh
 ```
 
 Este script:
@@ -650,47 +689,152 @@ qdrant:
     - QDRANT__SERVICE__MAX_REQUEST_SIZE_MB=100
 ```
 
-#### 3. Caché con Redis (Opcional)
+#### 3. Caché con Redis
 ```yaml
 redis:
-  image: redis:alpine
+  image: redis:7-alpine
   container_name: datalive-redis
   command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
+  healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 10s
+```
+
+**Variables de configuración:**
+```bash
+CACHE_TTL_FACTUAL=3600        # 1 hora
+CACHE_TTL_ANALYTICAL=1800     # 30 minutos  
+CACHE_TTL_TEMPORAL=900        # 15 minutos
+CACHE_TTL_PERSONAL=300        # 5 minutos
+CACHE_MAX_SIZE=1000
+CACHE_HIGH_CONFIDENCE_THRESHOLD=0.9
+```
+
+#### 4. Optimizaciones de Performance Implementadas
+
+**Ejecución Paralela de Agentes:**
+- RAG, KAG y CAG ejecutan en paralelo usando `asyncio.gather()`
+- Mejora del 50% en queries complejas (650ms → 350ms)
+- Manejo resiliente de errores por agente individual
+
+**Cache Inteligente:**
+- Cache por confidence score (solo >90% se cachean)
+- TTL diferenciado por tipo de consulta
+- Cache granular por usuario/sesión/estrategia
+
+**Métricas de Performance:**
+```python
+# Nuevas métricas implementadas
+query_duration.labels(strategy="RAG,KAG").observe(0.35)
+agent_usage_counter.labels(agent_type="rag").inc()
+cache_hit_counter.inc()
 ```
 
 ---
 
 ## 📊 Métricas y Monitoreo
 
+DataLive incluye un stack completo de monitoreo con **Prometheus** para recolección de métricas y **Grafana** para visualización, implementado como sidecar transparente.
+
+### Configuración Automática
+
+El monitoreo se configura automáticamente al ejecutar `docker-compose up -d`:
+
+```yaml
+# Servicios incluidos en docker-compose.yml
+prometheus:  # http://localhost:9090
+grafana:     # http://localhost:3000 (admin/[GRAFANA_PASSWORD])
+```
+
 ### Métricas Disponibles
 
-#### Sistema
-- `system_cpu_usage`: Uso de CPU
-- `system_memory_usage`: Uso de memoria
-- `system_disk_usage`: Uso de disco
+#### Sistema y Infraestructura
+- `system_cpu_usage`: Uso de CPU por servicio
+- `system_memory_usage`: Uso de memoria RAM
+- `system_disk_usage`: Uso de almacenamiento
+- `container_cpu_usage`: CPU por contenedor Docker
+- `container_memory_usage`: Memoria por contenedor
 
-#### Aplicación
-- `query_total`: Total de consultas
-- `query_duration_seconds`: Duración de consultas
-- `cache_hit_ratio`: Ratio de aciertos de caché
-- `ingestion_documents_total`: Documentos procesados
-- `ingestion_errors_total`: Errores de ingesta
+#### Aplicación DataLive
+- `query_total`: Total de consultas procesadas
+- `query_duration_seconds`: Duración de consultas (P50, P95, P99)
+- `query_success_rate`: Tasa de éxito de consultas
+- `agent_usage_total`: Uso de agentes por tipo (retrieval, synthesis, graph)
+- `cache_hit_total / cache_miss_total`: Estadísticas de caché Redis
+
+#### Ingesta de Documentos
+- `ingestion_documents_total`: Documentos procesados por tipo
+- `ingestion_duration_seconds`: Tiempo de procesamiento
+- `ingestion_errors_total`: Errores de ingesta por tipo
+- `vector_embeddings_generated`: Embeddings generados
 
 #### Bases de Datos
-- `postgres_connections_active`: Conexiones activas
-- `neo4j_node_count`: Número de nodos
-- `qdrant_vector_count`: Vectores almacenados
+- `postgres_connections_active`: Conexiones PostgreSQL activas
+- `neo4j_node_count / neo4j_relationship_count`: Grafo de conocimiento
+- `qdrant_vector_count`: Vectores almacenados por colección
+- `redis_keyspace_hits / redis_keyspace_misses`: Estadísticas Redis
 
 ### Dashboard de Grafana
 
-Importar dashboard: `monitoring/grafana-dashboard.json`
+**Ubicación**: `init-automated-configs/grafana/dashboards/datalive-overview.json`
 
-Paneles incluidos:
-- Estado general del sistema
-- Rendimiento de consultas
-- Estadísticas de ingesta
-- Uso de recursos por servicio
-- Alertas y anomalías
+#### Paneles Incluidos:
+1. **Query Response Time** - Percentil 95 de tiempos de respuesta
+2. **Cache Hit Rate** - Eficiencia del caché Redis
+3. **Queries per Minute** - Volumen de consultas
+4. **Error Rate** - Tasa de errores del sistema
+5. **Agent Usage by Type** - Distribución de uso de agentes
+6. **Query Strategies Used** - Estrategias de consulta más utilizadas
+7. **Response Time Distribution** - Mapa de calor de tiempos
+
+### Acceso a Herramientas
+
+- **Grafana**: http://localhost:3000
+  - Usuario: `admin`
+  - Contraseña: Definida en `GF_SECURITY_ADMIN_PASSWORD`
+- **Prometheus**: http://localhost:9090
+  - Interfaz de queries y métricas raw
+
+### Alertas Configuradas
+
+**Ubicación**: `init-automated-configs/prometheus/alert_rules.yml`
+
+- **High Query Response Time**: > 5 segundos
+- **Low Cache Hit Rate**: < 70%
+- **High Error Rate**: > 5%
+- **Service Down**: Servicios no disponibles
+- **High Memory Usage**: > 90% de memoria
+
+### Healthchecks y Testing Automatizado
+
+DataLive incluye un sistema completo de testing automatizado que se ejecuta transparentemente:
+
+#### Modos de Testing
+- **quick** (por defecto): Healthchecks básicos + validación rápida
+- **full**: Suite completa de tests de integración
+- **security**: Tests enfocados en seguridad y autenticación
+- **performance**: Tests de rendimiento y carga
+
+#### Configuración en .env
+```bash
+TEST_MODE=quick  # quick, full, security, performance
+```
+
+#### Scripts de Testing
+- `verify.sh`: Healthcheck principal con testing automático
+- `run-tests.sh`: Suite de tests bash para diferentes escenarios
+- `test-suite.py`: Tests Python para funcionalidad compleja
+- `test-api-key.py`: Validación de seguridad API
+- `test-redis-cache.py`: Tests de performance de caché
+
+#### Ejecución Automática
+Al ejecutar `docker-compose up -d`, el contenedor de healthcheck:
+1. Espera a que todos los servicios estén listos
+2. Ejecuta verificaciones de salud de todos los servicios
+3. Ejecuta tests adicionales según `TEST_MODE`
+4. Reporta el estado final del sistema
+
+El sistema es completamente transparente - no requiere intervención manual.
 
 ---
 

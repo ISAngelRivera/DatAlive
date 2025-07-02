@@ -60,16 +60,20 @@ graph TB
 - 10GB espacio en disco
 - Linux/macOS/Windows (WSL2)
 
-### Despliegue Automático
+### Despliegue Automático (Golden Path)
 ```bash
 # 1. Clonar repositorio
 git clone https://github.com/tu-org/datalive.git
 cd datalive
 
-# 2. Despliegue con un comando (Golden Path)
-./init-automated-configs/deploy-infrastructure.sh
+# 2. Configurar variables de entorno
+cp .env.template .env
+# Editar .env con tus configuraciones (opcional, funciona con defaults)
 
-# ✨ ¡Listo! El sistema está funcionando
+# 3. Iniciar sistema completo
+docker-compose up -d
+
+# ✨ ¡Listo! Los sidecars configuran todo automáticamente
 ```
 
 ### Acceso Inmediato
@@ -84,11 +88,13 @@ cd datalive
 # Ingestar tu primer documento
 curl -X POST http://localhost:8058/api/v1/ingest \\
   -H 'Content-Type: application/json' \\
+  -H 'X-API-Key: datalive-dev-key-change-in-production' \\
   -d '{\"source_type\": \"txt\", \"source\": \"DataLive es un sistema de IA empresarial\"}'
 
 # Hacer tu primera consulta inteligente
 curl -X POST http://localhost:8058/api/v1/query \\
   -H 'Content-Type: application/json' \\
+  -H 'X-API-Key: datalive-dev-key-change-in-production' \\
   -d '{\"query\": \"¿Qué es DataLive?\"}'
 ```
 
@@ -110,11 +116,12 @@ curl -X POST http://localhost:8058/api/v1/query \\
 - **[README.md](README.md)** - Descripción del proyecto y quick start *(este archivo)*
 
 ### 🔧 Para Desarrolladores  
-- **[docs/DOCUMENTACION_TECNICA.md](docs/DOCUMENTACION_TECNICA.md)** - Arquitectura, APIs, configuración técnica
-- **[docs/PROCEDIMIENTOS_ESPECIALES.md](docs/PROCEDIMIENTOS_ESPECIALES.md)** - Automatización N8N, SSL, configuraciones avanzadas
+- **[docs/DOCUMENTACION_TECNICA.md](docs/DOCUMENTACION_TECNICA.md)** - Arquitectura, APIs, configuración técnica, optimizaciones
+- **[docs/PROCEDIMIENTOS_ESPECIALES.md](docs/PROCEDIMIENTOS_ESPECIALES.md)** - Automatización N8N, OAuth, SSL, configuraciones avanzadas
+- **[docs/ARQUITECTURA_CREDENCIALES.md](docs/ARQUITECTURA_CREDENCIALES.md)** - Guía detallada de credenciales y seguridad
 
 ### 📊 Para Gestión
-- **[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)** - Estado del proyecto, hitos, tareas pendientes
+- **[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)** - Estado del proyecto, hitos, tareas completadas y pendientes
 
 ## 🚀 Casos de Uso
 

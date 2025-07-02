@@ -116,6 +116,30 @@ else
     echo "ℹ️  No license key provided - using community edition"
 fi
 
+# Install community nodes first (before creating credentials)
+echo "📦 Installing community nodes..."
+
+# Install Neo4j community node
+echo "   → Installing @kurea/n8n-nodes-neo4j..."
+install_response=$(curl -s -b "$COOKIE_FILE" -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"name": "@kurea/n8n-nodes-neo4j"}' \
+    "${REST_URL}/community-packages")
+
+if echo "$install_response" | grep -q '"installedVersion"'; then
+    installed_version=$(echo "$install_response" | grep -o '"installedVersion":"[^"]*"' | cut -d'"' -f4)
+    echo "     ✅ Installed version: $installed_version"
+elif echo "$install_response" | grep -q 'Package is already installed'; then
+    echo "     ✅ Already installed"
+else
+    echo "     ⚠️  Installation failed or pending"
+    echo "     Response: $(echo "$install_response" | head -c 200)..."
+fi
+
+echo "✅ Community nodes installation completed"
+echo "⏳ Waiting 10 seconds for nodes to be available..."
+sleep 10
+
 # Clean existing DataLive credentials
 echo "🧹 Cleaning existing DataLive credentials..."
 
@@ -131,7 +155,7 @@ else
     echo "   ℹ️  No existing DataLive credentials found"
 fi
 
-# Create essential credentials
+# Create essential credentials (after community nodes are installed)
 echo "🔑 Creating DataLive credentials..."
 
 # Helper function to create credential

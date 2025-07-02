@@ -31,19 +31,29 @@ Ubicación: `/init-automated-configs/n8n/setup.sh`
 - Registro de licencia empresarial (si está disponible)
 - Creación de 7 credenciales de servicios automáticamente
 
-#### 2. Credenciales Automatizadas
+#### 2. Instalación de Nodos Comunitarios
+
+**Orden de operaciones:**
+1. Instalación automática de nodos comunitarios
+2. Espera de 10 segundos para disponibilidad
+3. Creación de credenciales (usando tipos del nodo)
+
+**Nodos instalados automáticamente:**
+- `@kurea/n8n-nodes-neo4j` - Para conexiones a Neo4j
+
+#### 3. Credenciales Automatizadas
 
 | Servicio | Tipo | Configuración Especial |
 |----------|------|------------------------|
 | PostgreSQL | `postgres` | SSL deshabilitado para local |
-| Neo4j | `neo4j` | Requiere nodo comunitario @Kurea/n8n-nodes-neo4j |
+| Neo4j | `neo4j` | ✅ Usa nodo comunitario @Kurea/n8n-nodes-neo4j |
 | Qdrant | `qdrantApi` | Sin API key para local |
 | MinIO | `aws` | S3-compatible con endpoint local |
 | Ollama | `ollamaApi` | Base URL local |
 | DataLive Agent | `httpRequestAuth` | Header X-API-Key |
 | Google Drive | `googleOAuth2Api` | Requiere autorización manual |
 
-#### 3. Solución de Problemas Resueltos
+#### 4. Solución de Problemas Resueltos
 
 **Problema de autenticación "emailOrLdapLoginId":**
 ```json
@@ -206,10 +216,84 @@ async def verify_api_key(x_api_key: str = Header(...)):
 
 ---
 
+---
+
+## 🔗 Configuración OAuth para Google Drive
+
+### Descripción
+Configuración automática de credenciales OAuth2 para Google Drive que permite sincronización automática de documentos.
+
+### Componentes
+1. **Credencial automática** en N8N (si están configuradas las variables)
+2. **Workflow de sincronización** que se ejecuta cada 2 horas
+3. **Guía completa** de configuración OAuth
+
+### Configuración
+
+#### Variables de Entorno
+```bash
+GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-tu-client-secret
+```
+
+#### Proceso Automático
+1. Script N8N detecta variables Google
+2. Crea credencial "DataLive Google Drive" 
+3. Importa workflow de sincronización automática
+4. **Requiere autorización manual** en N8N UI
+
+#### Workflow Incluido
+- **Trigger**: Cada 2 horas
+- **Filtro**: Solo archivos modificados recientemente
+- **Tipos**: Google Docs, PDFs, archivos de texto
+- **Destino**: DataLive Agent para procesamiento
+- **Logging**: Éxito/error detallado
+
+### Configuración Detallada OAuth
+
+#### 1. Crear Proyecto en Google Cloud Console
+1. **Acceso**: https://console.cloud.google.com/
+2. **Proyecto**: Crear `DataLive-Integration`
+3. **APIs**: Habilitar Google Drive API, Docs API, Sheets API
+
+#### 2. Configurar Pantalla de Consentimiento
+- **Tipo**: Externo (cuentas personales) o Interno (G Workspace)
+- **Alcances**:
+  ```
+  https://www.googleapis.com/auth/drive
+  https://www.googleapis.com/auth/documents.readonly
+  ```
+
+#### 3. Crear Credenciales OAuth 2.0
+- **Tipo**: Aplicación web
+- **URIs de redirección**:
+  ```
+  http://localhost:5678/rest/oauth2-credential/callback
+  https://tu-dominio.com/rest/oauth2-credential/callback
+  ```
+
+#### 4. Configurar Variables de Entorno
+```bash
+GOOGLE_CLIENT_ID=123456789-abcdefghijklmnop.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-tu_client_secret_aqui
+```
+
+#### 5. Autorizar en N8N
+1. Acceder a N8N: http://localhost:5678
+2. Buscar credencial "DataLive Google Drive"
+3. Clic en "Connect my account"
+4. Completar flujo OAuth
+
+#### Troubleshooting Común
+- **redirect_uri_mismatch**: Verificar URIs en Google Cloud Console
+- **access_denied**: Usuario no en lista de prueba o permisos incorrectos
+- **invalid_client**: Client ID/Secret incorrectos en .env
+
+---
+
 ## 📚 Referencias
 
-- [Documento de Arquitectura de Credenciales](./cred.txt)
-- [Guía de Healthchecks](./HEALTHCHECKS_GUIDE.md)
+- [Documentación Técnica Completa](./DOCUMENTACION_TECNICA.md)
 - [Estado del Proyecto](./PROJECT_STATE.md)
 
 ---

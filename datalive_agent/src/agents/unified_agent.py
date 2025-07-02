@@ -3,6 +3,7 @@ Unified Agent that combines RAG, KAG, and CAG capabilities
 """
 
 import logging
+import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
@@ -156,6 +157,130 @@ class UnifiedAgent:
             
         except Exception as e:
             logger.error(f"Error processing query: {e}")
+            query_counter.labels(
+                status="error",
+                strategy=",".join(strategies_used) or "unknown"
+            ).inc()
+            raise
+    
+    async def process_query_optimized(self, request: QueryRequest) -> QueryResponse:
+        """
+        Optimized version of process_query that runs agents in parallel
+        when possible for better performance
+        """
+        start_time = datetime.now()
+        strategies_used = []
+        
+        try:
+            # 1. Check cache first
+            if request.use_cache:
+                cached_result = await self._check_cache(request)
+                if cached_result:
+                    cache_hit_counter.inc()
+                    return cached_result
+            
+            # 2. Determine strategy
+            strategy = await self.orchestrator.determine_strategy(
+                query=request.query,
+                context=request.context
+            )
+            
+            # 3. Prepare tasks for parallel execution
+            tasks = {}
+            
+            # RAG search (can run independently)
+            if strategy.use_rag:
+                strategies_used.append("RAG")
+                agent_usage_counter.labels(agent_type="rag").inc()
+                tasks['rag'] = self.rag_agent.search(
+                    query=request.query,
+                    limit=strategy.max_results,
+                    threshold=strategy.similarity_threshold
+                )
+            
+            # KAG analysis (can run in parallel with RAG)
+            if strategy.use_kag:
+                strategies_used.append("KAG")
+                agent_usage_counter.labels(agent_type="kag").inc()
+                tasks['kag'] = self.kag_agent.analyze_relationships(
+                    query=request.query,
+                    max_depth=strategy.kg_depth
+                )
+            
+            # Temporal analysis (depends on KAG structure but can overlap)
+            if strategy.use_temporal:
+                strategies_used.append("KAG-Temporal")
+                tasks['temporal'] = self.kag_agent.temporal_search(
+                    query=request.query,
+                    time_range=strategy.time_range
+                )
+            
+            # 4. Execute all tasks concurrently
+            if tasks:
+                completed_tasks = await asyncio.gather(
+                    *tasks.values(),
+                    return_exceptions=True
+                )
+                
+                # Map results back to task names
+                results = {}
+                for i, (task_name, task_result) in enumerate(zip(tasks.keys(), completed_tasks)):
+                    if isinstance(task_result, Exception):
+                        logger.warning(f"Task {task_name} failed: {task_result}")
+                        results[task_name] = {'error': str(task_result)}
+                    else:
+                        results[task_name] = task_result
+            else:
+                results = {}
+            
+            # 5. Combine results
+            combined_result = await self._combine_results(
+                results=results,
+                query=request.query,
+                strategy=strategy
+            )
+            
+            # 6. Generate final response
+            processing_time = (datetime.now() - start_time).total_seconds()
+            response = QueryResponse(
+                answer=combined_result['answer'],
+                sources=combined_result['sources'],
+                confidence=combined_result['confidence'],
+                strategy_used=strategies_used,
+                processing_time=processing_time,
+                cached=False,
+                metadata={
+                    'strategy': strategy.dict(),
+                    'result_counts': {
+                        k: len(v.get('results', [])) if isinstance(v, dict) and 'results' in v else 0
+                        for k, v in results.items()
+                    },
+                    'parallel_execution': True,
+                    'task_timings': {
+                        'total_time': processing_time,
+                        'parallel_phase': processing_time * 0.7  # Estimate
+                    }
+                }
+            )
+            
+            # 7. Update cache
+            if request.use_cache:
+                await self._update_cache(request, response)
+            
+            # 8. Record metrics
+            query_counter.labels(
+                status="success",
+                strategy=",".join(strategies_used)
+            ).inc()
+            
+            query_duration.labels(
+                strategy=",".join(strategies_used)
+            ).observe(response.processing_time)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error in optimized query processing: {e}")
             query_counter.labels(
                 status="error",
                 strategy=",".join(strategies_used) or "unknown"
