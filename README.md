@@ -120,8 +120,120 @@ curl -X POST http://localhost:8058/api/v1/query \\
 - **[docs/PROCEDIMIENTOS_ESPECIALES.md](docs/PROCEDIMIENTOS_ESPECIALES.md)** - Automatización N8N, OAuth, SSL, configuraciones avanzadas
 - **[docs/ARQUITECTURA_CREDENCIALES.md](docs/ARQUITECTURA_CREDENCIALES.md)** - Guía detallada de credenciales y seguridad
 
+### 🤖 Claude Desktop Resources
+- **[claude_desktop/](claude_desktop/)** - Scripts, análisis y recomendaciones de Claude Desktop
+- **[claude_desktop/docs/PORTS.md](claude_desktop/docs/PORTS.md)** - Documentación completa de puertos y conectividad
+- **[claude_desktop/scripts/](claude_desktop/scripts/)** - Scripts de diagnóstico e infraestructura
+
 ### 📊 Para Gestión
 - **[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)** - Estado del proyecto, hitos, tareas completadas y pendientes
+
+### 🔍 Health Checks y Diagnósticos
+
+DataLive incluye herramientas integradas para verificar el estado del sistema y diagnosticar problemas:
+
+#### Scripts de Diagnóstico
+
+```bash
+# Verificación rápida del estado de todos los servicios
+./claude_desktop/scripts/quick-health-check.sh
+
+# Diagnóstico completo de infraestructura
+./claude_desktop/scripts/infrastructure-diagnostic.sh
+```
+
+#### Verificación Rápida (`quick-health-check.sh`)
+- ✅ Verifica si todos los servicios están ejecutándose
+- 🚦 Código de salida: 0 (OK) o 1 (problemas detectados)
+- 🎨 Salida colorizada para fácil interpretación
+- ⚡ Ejecución en menos de 10 segundos
+
+```bash
+# Ejemplo de salida
+🚀 DataLive Quick Health Check
+==============================
+
+✅ Docker - Available
+✅ Neo4j - Running (datalive_neo4j_1)
+✅ Postgres - Running (datalive_postgres_1)
+✅ Redis - Running (datalive_redis_1)
+✅ Qdrant - Running (datalive_qdrant_1)
+✅ Ollama - Running (datalive_ollama_1)
+✅ Datalive-agent - Running (datalive_datalive-agent_1)
+✅ N8n - Running (datalive_n8n_1)
+
+📊 SUMMARY
+=========
+Services: 7/7 healthy (100%)
+✅ All systems operational
+🚀 Ready for DataLive operations
+```
+
+#### Diagnóstico Completo (`infrastructure-diagnostic.sh`)
+- 📋 Análisis exhaustivo de cada servicio
+- 🔍 Verificación de configuraciones específicas por servicio
+- 📊 Estadísticas de uso (CPU, memoria)
+- 🔗 Tests de conectividad inter-servicios
+- 📄 Genera reporte detallado en `claude_desktop/reports/infrastructure-report.md`
+
+**Características avanzadas:**
+- **Neo4j**: Verifica plugins APOC y GDS
+- **PostgreSQL**: Comprueba esquemas RAG, CAG, monitoring
+- **Qdrant**: Valida colecciones requeridas (documents, entities, cache)
+- **Ollama**: Lista modelos descargados
+- **Conectividad**: Tests automáticos entre servicios
+
+#### Interpretación de Resultados
+
+| Estado | Descripción | Acción Requerida |
+|--------|-------------|------------------|
+| ✅ **Healthy** | Servicio funcionando correctamente | Ninguna |
+| ⚠️ **Warning** | Servicio ejecutándose pero con problemas menores | Revisar logs específicos |
+| ❌ **Critical** | Servicio no disponible o fallos graves | Investigación inmediata requerida |
+
+#### Solución de Problemas Comunes
+
+**Servicios no encontrados:**
+```bash
+# Verificar que Docker Compose esté ejecutándose
+docker-compose ps
+
+# Reiniciar servicios problemáticos
+docker-compose restart [servicio]
+```
+
+**Problemas de conectividad:**
+```bash
+# Verificar red Docker
+docker network ls
+docker network inspect datalive_default
+
+# Verificar puertos específicos
+./claude_desktop/scripts/infrastructure-diagnostic.sh | grep "❌"
+```
+
+**Verificación de logs detallados:**
+```bash
+# Ver logs de servicio específico
+docker-compose logs [servicio] --tail=50
+
+# Seguir logs en tiempo real
+docker-compose logs -f [servicio]
+```
+
+#### Monitoreo Continuo
+
+Para monitoreo en producción, integra los scripts en tu sistema de monitoreo:
+
+```bash
+# Cron job para verificación cada 5 minutos
+*/5 * * * * /path/to/datalive/claude_desktop/scripts/quick-health-check.sh
+
+# Alerta si hay problemas (exit code 1)
+./claude_desktop/scripts/quick-health-check.sh || echo "DataLive issues detected" | mail -s "Alert" admin@company.com
+```
+
+Ver documentación completa de puertos en [claude_desktop/docs/PORTS.md](claude_desktop/docs/PORTS.md) para configuración de firewall y conectividad.
 
 ## 🚀 Casos de Uso
 
