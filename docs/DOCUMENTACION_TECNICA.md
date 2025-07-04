@@ -836,6 +836,65 @@ Al ejecutar `docker-compose up -d`, el contenedor de healthcheck:
 
 El sistema es completamente transparente - no requiere intervención manual.
 
+### MCP N8N para Desarrollo de Workflows (Temporal)
+
+**⚠️ HERRAMIENTA DE DESARROLLO ÚNICAMENTE**
+
+Durante el desarrollo de workflows, DataLive incluye temporalmente un servidor MCP de N8N:
+
+#### Capacidades del MCP N8N
+- **525+ nodos documentados** con especificaciones completas
+- **Validación automática** de workflows antes del despliegue
+- **Asistencia IA** para creación y optimización de workflows
+- **Detección de errores** en configuraciones existentes
+
+#### Uso en Desarrollo
+```bash
+# Para desarrollo con MCP
+docker-compose --profile development up -d
+
+# Para producción (sin MCP)
+docker-compose up -d
+```
+
+#### Nota Importante
+El servidor MCP será removido antes del despliegue en producción. Solo es una herramienta para crear workflows optimizados.
+
+### Workflows de N8N Automatizados
+
+DataLive utiliza un **workflow maestro unificado** que maneja toda la funcionalidad del sistema:
+
+#### DataLive Master Workflow v2
+- **📥 Zona de Ingesta**: Google Drive (cada 2h), Git repos (cada 1h), uploads manuales
+- **🧠 Zona de Procesamiento**: Extracción, normalización, almacenamiento
+- **🔍 Zona de Consultas**: Detección de intención, procesamiento multi-estrategia
+- **📊 Zona de Monitoreo**: Métricas, manejo de errores, alertas
+
+#### Endpoints Automáticos
+```bash
+# Consultas inteligentes
+POST http://localhost:5678/webhook/datalive/query
+{
+  "query": "¿Qué es DataLive?",
+  "user_id": "usuario_123",
+  "session_id": "sesion_abc"
+}
+
+# Ingesta de documentos
+POST http://localhost:5678/webhook/datalive/ingest
+{
+  "source_type": "txt",
+  "source": "Contenido del documento...",
+  "filename": "documento.txt"
+}
+```
+
+#### Configuración Automática
+- **Importación**: Automática al iniciar N8N
+- **Activación**: Automática tras importación
+- **Credenciales**: Auto-configuradas para todos los servicios
+- **Monitoreo**: Integrado con métricas y alertas
+
 ---
 
 ## 🎯 Mejores Prácticas

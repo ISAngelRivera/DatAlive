@@ -23,6 +23,7 @@ AGENT_HOST="${DATALIVE_AGENT_HOST:-datalive_agent}"
 REDIS_HOST="${REDIS_HOST:-redis}"
 PROMETHEUS_HOST="${PROMETHEUS_HOST:-prometheus}"
 GRAFANA_HOST="${GRAFANA_HOST:-grafana}"
+N8N_MCP_HOST="${N8N_MCP_HOST:-n8n-mcp}"
 
 # Colors for output (if terminal supports it)
 GREEN='\033[0;32m'
@@ -85,6 +86,13 @@ check_service "Prometheus" "curl -s -f http://$PROMETHEUS_HOST:9090/-/healthy"
 
 # 10. Grafana
 check_service "Grafana" "curl -s -f http://$GRAFANA_HOST:3000/api/health"
+
+# 11. N8N MCP Server (Development only - skip if not running)
+if nc -z $N8N_MCP_HOST 3000 2>/dev/null; then
+    check_service "N8N MCP Server" "nc -z $N8N_MCP_HOST 3000"
+else
+    echo "   N8N MCP Server: ⚠️  Not running (development tool)"
+fi
 
 echo ""
 echo "🔌 Checking API Endpoints..."
@@ -202,6 +210,12 @@ if [ $SUCCESS_RATE -eq 100 ]; then
             echo "⚡ Running quick validation tests..."
             if [ -f ./quick-test.sh ]; then
                 ./quick-test.sh
+            fi
+            
+            echo "🔄 Testing N8N workflows..."
+            if [ -f ./test-workflows.sh ]; then
+                chmod +x ./test-workflows.sh
+                ./test-workflows.sh
             fi
             ;;
     esac

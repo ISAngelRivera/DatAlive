@@ -80,7 +80,7 @@ async def test_cache_patterns():
         session_data = {
             "user_id": "user123",
             "recent_queries": ["test query 1", "test query 2"],
-            "preferences": {"language": "es", "model": "phi3"}
+            "preferences": {"language": "es", "model": "phi4-mini"}
         }
         
         await redis_client.setex(session_key, 1800, json.dumps(session_data))

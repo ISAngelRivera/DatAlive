@@ -1,0 +1,336 @@
+{
+  "name": "DataLive - Query Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "datalive/query",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-query",
+      "name": "Query Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 400],
+      "webhookId": "datalive-query"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate query\nconst body = $input.item.json.body;\nlet data;\n\ntry {\n  data = typeof body === 'string' ? JSON.parse(body) : body;\n} catch (error) {\n  throw new Error('Invalid JSON in request body');\n}\n\n// Validate required fields\nif (!data.query) {\n  throw new Error('Missing required field: query');\n}\n\n// Extract parameters\nconst query = data.query;\nconst strategy = data.strategy || 'auto';\nconst maxResults = data.max_results || 5;\nconst filters = data.filters || {};\nconst sessionId = data.session_id || 'default';\n\n// Analyze query to determine best strategy\nlet selectedStrategy = strategy;\nif (strategy === 'auto') {\n  // Simple heuristics for strategy selection\n  const queryLower = query.toLowerCase();\n  \n  if (queryLower.includes('relacion') || queryLower.includes('conecta') || queryLower.includes('quien')) {\n    selectedStrategy = 'kag'; // Knowledge graph for relationships\n  } else if (queryLower.includes('cuando') || queryLower.includes('reciente') || queryLower.includes('ultimo')) {\n    selectedStrategy = 'cag'; // Contextual for temporal queries\n  } else {\n    selectedStrategy = 'rag'; // Default to RAG for factual queries\n  }\n}\n\nreturn {\n  query: query,\n  strategy: selectedStrategy,\n  maxResults: maxResults,\n  filters: filters,\n  sessionId: sessionId,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "validate-query",
+      "name": "Validate and Route Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "rag-condition",
+              "leftValue": "={{ $json.strategy }}",
+              "rightValue": "rag",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "kag-condition", 
+              "leftValue": "={{ $json.strategy }}",
+              "rightValue": "kag",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cag-condition",
+              "leftValue": "={{ $json.strategy }}",
+              "rightValue": "cag",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "strategy-router",
+      "name": "Strategy Router",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:v1.5",
+        "options": {}
+      },
+      "id": "embed-query",
+      "name": "Embed Query",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [850, 200],
+      "credentials": {
+        "ollamaApi": {
+          "id": "1",
+          "name": "Ollama"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "qdrantCollection": {
+          "mode": "list",
+          "collection": "datalive_documents"
+        },
+        "topK": "={{ $('validate-query').item.json.maxResults }}",
+        "options": {}
+      },
+      "id": "qdrant-search",
+      "name": "Search Qdrant",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [1050, 200],
+      "credentials": {
+        "qdrantApi": {
+          "id": "2",
+          "name": "Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM documents WHERE metadata::jsonb @> '{}' ORDER BY created_at DESC LIMIT {{ $('validate-query').item.json.maxResults }}",
+        "options": {}
+      },
+      "id": "postgres-cag",
+      "name": "Query PostgreSQL (CAG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [850, 600],
+      "credentials": {
+        "postgres": {
+          "id": "3",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Placeholder for Neo4j query (KAG)\n// In a real implementation, you would use the Neo4j node or HTTP request\n// For now, we'll simulate a graph query response\n\nconst query = $('validate-query').item.json.query;\n\n// Simulated graph results\nconst graphResults = {\n  nodes: [\n    {\n      id: 'doc1',\n      label: 'Document',\n      properties: {\n        title: 'Company Policies',\n        created_at: '2024-01-01'\n      }\n    }\n  ],\n  relationships: [\n    {\n      from: 'doc1',\n      to: 'policy1',\n      type: 'CONTAINS'\n    }\n  ],\n  relevance: 0.85\n};\n\nreturn {\n  strategy: 'kag',\n  results: graphResults,\n  query: query\n};"
+      },
+      "id": "neo4j-kag",
+      "name": "Query Neo4j (KAG)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "model": "phi3:medium",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "llm-synthesizer",
+      "name": "LLM Synthesizer",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [1250, 400],
+      "credentials": {
+        "ollamaApi": {
+          "id": "1",
+          "name": "Ollama"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge results from different strategies\nconst strategy = $('validate-query').item.json.strategy;\nconst query = $('validate-query').item.json.query;\nlet results = [];\nlet sources = [];\n\n// Gather results based on strategy\nif (strategy === 'rag') {\n  const ragResults = $('qdrant-search').all();\n  results = ragResults.map(r => ({\n    content: r.json.pageContent || r.json.content,\n    score: r.json.score || 0.8,\n    source: 'rag'\n  }));\n} else if (strategy === 'kag') {\n  const kagResults = $('neo4j-kag').item.json.results;\n  results = [{\n    content: JSON.stringify(kagResults),\n    score: kagResults.relevance || 0.85,\n    source: 'kag'\n  }];\n} else if (strategy === 'cag') {\n  const cagResults = $('postgres-cag').all();\n  results = cagResults.map(r => ({\n    content: r.json.content,\n    score: 0.9,\n    source: 'cag',\n    metadata: r.json.metadata\n  }));\n}\n\n// Prepare context for LLM\nconst context = results.map(r => `[Source: ${r.source}, Score: ${r.score}]\\n${r.content}`).join('\\n\\n---\\n\\n');\n\n// Create prompt for synthesis\nconst prompt = `Based on the following information retrieved using ${strategy.toUpperCase()} strategy, please answer this question: \"${query}\"\n\nContext:\n${context}\n\nProvide a clear, concise answer based on the retrieved information. If the information is insufficient, indicate what's missing.`;\n\nreturn {\n  prompt: prompt,\n  strategy: strategy,\n  sources: results,\n  query: query\n};"
+      },
+      "id": "merge-results",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final response\nconst llmResponse = $('llm-synthesizer').item.json.response || 'Unable to generate response';\nconst mergedData = $('merge-results').item.json;\n\nconst response = {\n  response: llmResponse,\n  sources: mergedData.sources.map(s => ({\n    content: s.content.substring(0, 200) + '...',\n    relevance: s.score,\n    type: s.source\n  })),\n  confidence: mergedData.sources.length > 0 ? Math.max(...mergedData.sources.map(s => s.score)) : 0,\n  strategy_used: mergedData.strategy,\n  processing_time: (Date.now() - new Date($('validate-query').item.json.timestamp).getTime()) / 1000,\n  cached: false\n};\n\nreturn response;"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-response",
+        "responseMode": "onReceived",
+        "responseData": "={{ JSON.stringify($json) }}"
+      },
+      "id": "send-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1650, 400]
+    }
+  ],
+  "connections": {
+    "Query Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate and Route Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Route Query": {
+      "main": [
+        [
+          {
+            "node": "Strategy Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strategy Router": {
+      "main": [
+        [
+          {
+            "node": "Embed Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query Neo4j (KAG)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query PostgreSQL (CAG)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed Query": {
+      "main": [
+        [
+          {
+            "node": "Search Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Neo4j (KAG)": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query PostgreSQL (CAG)": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "LLM Synthesizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Synthesizer": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DataLive",
+      "createdAt": "2024-01-04T12:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "datalive-instance"
+  }
+}

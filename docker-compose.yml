@@ -297,7 +297,7 @@ services:
       - OLLAMA_HOST=http://ollama:11434
     command: |
       "echo '📥 Downloading LLM model...' && \
-       ollama pull ${LLM_MODEL:-phi3:medium} && \
+       ollama pull ${LLM_MODEL:-phi4-mini} && \
        echo '✅ Model downloaded successfully'"
     networks:
       - datalive-net
@@ -316,6 +316,21 @@ services:
     command: sh -c "apk add --no-cache curl jq && /scripts/setup.sh"
     networks:
       - datalive-net
+
+  # N8N MCP Server for AI-assisted workflow configuration (DEVELOPMENT ONLY)
+  # TODO: Remove this service before production deployment
+  n8n-mcp:
+    build:
+      context: ./init-automated-configs/mcp
+      dockerfile: Dockerfile
+    container_name: datalive-n8n-mcp
+    restart: unless-stopped
+    profiles:
+      - development  # Only runs in development profile
+    networks:
+      - datalive-net
+    volumes:
+      - ./init-automated-configs/mcp:/mcp:ro
 
   # Final System Health Check & Testing
   healthcheck:

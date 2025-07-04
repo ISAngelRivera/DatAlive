@@ -253,44 +253,87 @@ fi
 
 # Import workflows if directory exists
 if [ -d "/workflows" ]; then
-    echo "📋 Importing workflows..."
+    echo "📋 Importing DataLive workflows..."
     
     workflow_count=0
-    for workflow_dir in /workflows/*/; do
-        if [ -d "$workflow_dir" ]; then
-            for workflow_file in "$workflow_dir"*.json; do
-                if [ -f "$workflow_file" ]; then
-                    workflow_name=$(basename "$workflow_file" .json)
-                    echo "   → Importing: $workflow_name"
-                    
-                    workflow_response=$(curl -s -b "$COOKIE_FILE" -X POST \
-                        -H "Content-Type: application/json" \
-                        -d "@$workflow_file" \
-                        "${REST_URL}/workflows")
-                    
-                    if echo "$workflow_response" | grep -q "\"id\""; then
-                        workflow_id=$(echo "$workflow_response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
-                        echo "     ✅ Imported (ID: $workflow_id)"
-                        workflow_count=$((workflow_count + 1))
-                        
-                        # Activate the workflow
-                        if curl -s -b "$COOKIE_FILE" -X PATCH \
-                            -H "Content-Type: application/json" \
-                            -d '{"active": true}' \
-                            "${REST_URL}/workflows/${workflow_id}" > /dev/null; then
-                            echo "     🟢 Activated"
-                        else
-                            echo "     ⚠️  Failed to activate"
-                        fi
-                    else
-                        echo "     ⚠️  Failed to import"
-                    fi
-                fi
-            done
+    
+    # Import master workflow first (priority) - Use Complete version
+    master_workflow="/workflows/DataLive-Master-Workflow-Complete.json"
+    if [ -f "$master_workflow" ]; then
+        echo "   🎯 Importing DataLive Master Workflow (Complete)..."
+        
+        workflow_response=$(curl -s -b "$COOKIE_FILE" -X POST \
+            -H "Content-Type: application/json" \
+            -d "@$master_workflow" \
+            "${REST_URL}/workflows")
+        
+        if echo "$workflow_response" | grep -q "\"id\""; then
+            workflow_id=$(echo "$workflow_response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+            echo "     ✅ Master Workflow imported (ID: $workflow_id)"
+            workflow_count=$((workflow_count + 1))
+            
+            # Activate the master workflow
+            if curl -s -b "$COOKIE_FILE" -X PATCH \
+                -H "Content-Type: application/json" \
+                -d '{"active": true}' \
+                "${REST_URL}/workflows/${workflow_id}" > /dev/null; then
+                echo "     🟢 Master Workflow activated"
+                echo "     📡 Webhooks available:"
+                echo "        - POST /webhook/datalive/query (Query processing)"
+                echo "        - POST /webhook/datalive/ingest (Document ingestion)"
+            else
+                echo "     ⚠️  Failed to activate master workflow"
+            fi
+        else
+            echo "     ❌ Failed to import master workflow"
+            echo "     Response: $workflow_response"
         fi
-    done
+    else
+        echo "     ⚠️  Master workflow not found: $master_workflow"
+    fi
+    
+    # Import test workflows (if they exist)
+    if [ -d "/workflows/test" ]; then
+        echo "   🧪 Importing test workflows..."
+        for workflow_file in /workflows/test/*.json; do
+            if [ -f "$workflow_file" ]; then
+                workflow_name=$(basename "$workflow_file" .json)
+                echo "   → Importing test: $workflow_name"
+                
+                workflow_response=$(curl -s -b "$COOKIE_FILE" -X POST \
+                    -H "Content-Type: application/json" \
+                    -d "@$workflow_file" \
+                    "${REST_URL}/workflows")
+                
+                if echo "$workflow_response" | grep -q "\"id\""; then
+                    workflow_id=$(echo "$workflow_response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+                    echo "     ✅ Test imported (ID: $workflow_id)"
+                    workflow_count=$((workflow_count + 1))
+                    
+                    # Note: Test workflows are imported but not auto-activated
+                    echo "     ℹ️  Test workflow ready (manual activation required)"
+                else
+                    echo "     ⚠️  Failed to import test workflow: $workflow_name"
+                fi
+            fi
+        done
+    fi
     
     echo "✅ Imported $workflow_count workflows"
+    
+    if [ $workflow_count -gt 0 ]; then
+        echo ""
+        echo "🎉 DataLive N8N Setup Complete!"
+        echo ""
+        echo "📡 Available Endpoints:"
+        echo "   • Query API: ${N8N_URL}/webhook/datalive/query"
+        echo "   • Ingest API: ${N8N_URL}/webhook/datalive/ingest"
+        echo ""
+        echo "🔧 Management:"
+        echo "   • N8N UI: ${N8N_URL}"
+        echo "   • Credentials: Auto-configured"
+        echo "   • Workflows: Auto-activated"
+    fi
 else
     echo "ℹ️  No workflows directory found"
 fi
