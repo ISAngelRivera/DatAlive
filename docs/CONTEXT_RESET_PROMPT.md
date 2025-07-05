@@ -11,18 +11,33 @@ Hola Claude, necesito que te recontextualices completamente sobre el proyecto Da
 
 INSTRUCCIONES PARA LA RECONTEXTUALIZACIÓN:
 
-1. **PRIMER PASO - Investigación de tecnologías actuales:**
+1. **PRIMER PASO - Investigación de tecnologías actuales (SOLO GRATUITAS/OPEN SOURCE):**
    Antes de revisar el código, haz una búsqueda web actualizada (últimos 6 meses) sobre:
-   - "RAG system best practices 2025" - Nuevas técnicas y optimizaciones
-   - "vector database comparison 2025" - Alternativas a Qdrant o mejoras
-   - "knowledge graph databases 2025" - Avances en Neo4j o nuevas opciones
-   - "LLM orchestration frameworks 2025" - Alternativas a Ollama o mejoras
-   - "FastAPI performance optimization 2025" - Nuevas técnicas de optimización
-   - "Docker compose best practices 2025" - Mejoras en orquestación
-   - "N8N workflow automation alternatives 2025" - Nuevas herramientas de workflow
-   - "enterprise AI deployment patterns 2025" - Mejores prácticas de despliegue
-   - "embedding models performance 2025" - Modelos más eficientes que sentence-transformers
-   - "async Python database patterns 2025" - Mejoras en asyncpg, redis.asyncio
+   
+   **🔴 CRÍTICO - N8N Workflows (CORE del sistema - NO cambiar N8N):**
+   - "N8N workflow best practices 2025" - Mejores prácticas para crear workflows
+   - "N8N RAG workflow examples 2025" - Ejemplos de workflows RAG funcionales
+   - "N8N API integration patterns 2025" - Patrones para integrar con APIs Python
+   - "N8N knowledge graph workflow 2025" - Workflows para grafos de conocimiento
+   - "N8N error handling best practices 2025" - Manejo de errores en workflows
+   - "N8N parallel processing workflows 2025" - Ejecución paralela de estrategias
+   - "N8N database integration patterns 2025" - Conexiones con PostgreSQL, Neo4j, Qdrant
+   
+   **⚡ ACTUALIZACIONES DE VERSIONES:**
+   - "Ollama phi4 vs phi3 performance 2025" - Comparación y mejoras
+   - "pgvector latest version features 2025" - Nuevas funcionalidades
+   - "Neo4j community edition updates 2025" - Últimas versiones gratuitas
+   - "Qdrant latest version improvements 2025" - Nuevas funcionalidades gratuitas
+   - "FastAPI latest version optimization 2025" - Mejoras de rendimiento
+   - "sentence-transformers new models 2025" - Modelos de embedding más eficientes
+   - "asyncpg performance improvements 2025" - Optimizaciones de base de datos
+   - "Redis latest features 2025" - Nuevas funcionalidades de caché
+   
+   **🚀 OPTIMIZACIONES ARQUITECTÓNICAS (sin cambiar stack base):**
+   - "RAG reranking techniques 2025" - Mejores algoritmos de reordenamiento
+   - "knowledge graph RAG integration 2025" - Patrones KAG mejorados
+   - "vector database chunking strategies 2025" - Mejores técnicas de chunking
+   - "LLM prompt engineering RAG 2025" - Optimización de prompts para RAG
 
 2. **SEGUNDO PASO - Lee la documentación base:**
    - Lee completamente `/docs/CLAUDE.md` (guía principal para Claude Code)
@@ -35,12 +50,14 @@ INSTRUCCIONES PARA LA RECONTEXTUALIZACIÓN:
    - Revisa `/datalive_agent/pyproject.toml` (dependencias)
    - Checa `/datalive_agent/tests/` (estado del testing)
 
-4. **CUARTO PASO - Comparación tecnológica:**
+4. **CUARTO PASO - Análisis de mejoras (SOLO GRATUITAS - NO CAMBIAR STACK BASE):**
    Compara las tecnologías actuales del proyecto con las encontradas en la búsqueda:
-   - ¿Hay versiones más nuevas de las dependencias actuales?
-   - ¿Existen alternativas más eficientes o modernas?
-   - ¿Hay patrones arquitectónicos mejores que podríamos adoptar?
-   - ¿Qué mejoras de rendimiento o seguridad están disponibles?
+   - ¿Hay versiones más nuevas de las dependencias actuales? (ej: phi3→phi4, pgvector updates)
+   - ¿Mejores prácticas para N8N workflows que resuelvan los problemas críticos?
+   - ¿Patrones de integración N8N↔DataLive Agent más eficientes?
+   - ¿Técnicas de reranking RAG+KAG+CAG más avanzadas?
+   - ¿Optimizaciones de rendimiento sin cambiar tecnologías base?
+   - ¿Mejores estructuras de workflow para procesamiento paralelo?
 
 5. **QUINTO PASO - Entiende el estado actual:**
    - ¿Qué funciona completamente?
@@ -54,15 +71,17 @@ INSTRUCCIONES PARA LA RECONTEXTUALIZACIÓN:
    - KAG: Grafo de conocimiento con Neo4j  
    - CAG: Análisis contextual/temporal con PostgreSQL+Redis
    
-   ESTADO CRÍTICO: Los workflows de N8N están rotos y necesitan reescritura completa.
+   **🔴 PROBLEMA CRÍTICO PRINCIPAL**: Los workflows de N8N no están funcionando correctamente.
+   **⚠️ RESTRICCIONES**: Solo soluciones gratuitas/open source. N8N es CORE inmutable.
+   **🎯 ENFOQUE**: Actualizaciones de versiones, mejores prácticas N8N, optimizaciones sin cambio de stack.
 
 7. **DESPUÉS DE LEER TODO:**
    Resume en 4-5 párrafos:
    - El estado actual del proyecto
-   - Los problemas críticos pendientes
-   - **RECOMENDACIONES DE MODERNIZACIÓN**: Tecnologías o prácticas nuevas que deberíamos considerar
-   - Las próximas tareas prioritarias (incluyendo actualizaciones tecnológicas)
-   - Cómo puedes ayudar a continuar el desarrollo manteniendo el proyecto actualizado
+   - **PROBLEMA CRÍTICO**: Específicamente los issues con workflows N8N y cómo resolverlos
+   - **RECOMENDACIONES GRATUITAS**: Solo actualizaciones de versión, mejores prácticas N8N, optimizaciones
+   - Las próximas tareas prioritarias (priorizar N8N workflows como crítico)
+   - Cómo puedes ayudar especialmente con los workflows N8N y integraciones RAG+KAG+CAG
 
 ¡Gracias! Una vez que hayas leído toda la documentación y código, dime que estás listo para continuar trabajando en DataLive.
 ```
@@ -73,30 +92,31 @@ INSTRUCCIONES PARA LA RECONTEXTUALIZACIÓN:
 
 **Cada reset de contexto debe incluir evaluación de:**
 
-### 🔍 Áreas de Búsqueda Prioritarias
-1. **Stack RAG/KAG/CAG**: Nuevos enfoques, frameworks emergentes
-2. **Vector Databases**: Rendimiento, nuevas funcionalidades, alternativas
-3. **LLM Orchestration**: Herramientas más eficientes que Ollama
-4. **Workflow Automation**: Alternativas modernas a N8N o mejoras
-5. **Python AI Stack**: Nuevas librerías para FastAPI, async, embeddings
-6. **Containerization**: Mejoras en Docker, Kubernetes patterns
-7. **Monitoring & Observability**: Herramientas más avanzadas que Prometheus/Grafana
-8. **Security Patterns**: Nuevas prácticas de seguridad para IA empresarial
+### 🔍 Áreas de Búsqueda Prioritarias (SOLO GRATUITAS)
+1. **🔴 CRÍTICO - N8N Workflows**: Mejores prácticas, patrones de integración, ejemplos funcionales
+2. **⚡ Actualizaciones de Versión**: phi3→phi4, pgvector updates, Neo4j community, Qdrant features
+3. **🚀 Optimizaciones RAG+KAG+CAG**: Reranking algorithms, chunking strategies, prompt engineering
+4. **🔧 Integraciones**: Mejores patrones N8N↔Python, database connections, error handling
+5. **📈 Performance**: FastAPI optimizations, async patterns, embedding models efficiency
+6. **🐳 Container Optimizations**: Docker compose best practices, healthcheck improvements
+7. **📊 Monitoring Enhancements**: Prometheus/Grafana optimizations (NO alternativas de pago)
+8. **🔒 Security Updates**: Nuevas prácticas gratuitas para IA empresarial
 
-### ⚡ Criterios de Evaluación para Cambios
+### ⚡ Criterios de Evaluación para Cambios (RESTRICCIONES APLICABLES)
+- **GRATUITO**: ¿Es completamente gratuito/open source?
+- **SIN CAMBIO DE STACK**: ¿Funciona con tecnologías actuales (N8N, Qdrant, Neo4j, etc.)?
 - **Rendimiento**: ¿Mejora significativa en velocidad o eficiencia?
-- **Mantenibilidad**: ¿Simplifica el código o la arquitectura?
-- **Escalabilidad**: ¿Mejor soporte para crecimiento empresarial?
-- **Seguridad**: ¿Mejores prácticas de seguridad o compliance?
-- **Ecosistema**: ¿Mayor adopción, mejor documentación, comunidad activa?
+- **N8N Workflows**: ¿Ayuda a resolver los problemas críticos de workflows?
 - **Compatibilidad**: ¿Migración viable sin romper funcionalidad existente?
+- **Mantenibilidad**: ¿Simplifica el código o la arquitectura actual?
 
-### 🎯 Tipos de Recomendaciones Esperadas
-- **Actualizaciones de versión**: Dependencias con nuevas versiones estables
-- **Reemplazos tecnológicos**: Tecnologías obsoletas que deberían cambiarse
-- **Mejoras arquitectónicas**: Patrones más modernos o eficientes
-- **Optimizaciones de rendimiento**: Técnicas nuevas para mejorar velocidad
-- **Funcionalidades emergentes**: Capacidades nuevas que agregar valor
+### 🎯 Tipos de Recomendaciones PERMITIDAS
+- **Actualizaciones de versión**: Nuevas versiones estables de dependencias actuales
+- **Mejores prácticas N8N**: Patrones de workflow más eficientes y funcionales
+- **Optimizaciones de rendimiento**: Técnicas que mejoren velocidad sin cambiar stack
+- **Configuraciones mejoradas**: Settings y configuraciones más óptimas
+- **Patrones de integración**: Mejores formas de conectar N8N con DataLive Agent
+- **Algoritmos de reranking**: Técnicas RAG+KAG+CAG más avanzadas pero gratuitas
 
 ---
 
@@ -138,16 +158,17 @@ cd datalive_agent && python tests/run_all_tests.py --quick
 - Sistema de métricas
 
 ### ❌ Crítico - No Funcional (30%)
-- **Workflows N8N** (requieren reescritura completa)
+- **🔴 WORKFLOWS N8N** (PROBLEMA PRINCIPAL - requieren reescritura completa)
 - Integración N8N ↔ DataLive Agent
 - Router inteligente de estrategias
 - Tests end-to-end completos
 
-### 🎯 Próximas Prioridades
-1. **Arreglar workflows N8N** (crítico)
-2. **Completar lógica de agentes** (alta)
-3. **Implementar router de estrategias** (alta)
-4. **Testing end-to-end** (media)
+### 🎯 Próximas Prioridades (ENFOQUE N8N)
+1. **🔴 CRÍTICO: Arreglar workflows N8N** (máxima prioridad)
+2. **Mejorar patrones N8N-Python integration** (alta prioridad)
+3. **Implementar router de estrategias en N8N** (alta prioridad)
+4. **Actualizar versiones de dependencias** (media prioridad)
+5. **Testing end-to-end workflows** (media prioridad)
 
 ---
 
@@ -178,13 +199,15 @@ cd datalive_agent && python tests/run_all_tests.py --quick
 
 ---
 
-## 🚨 Recordatorios Importantes
+## 🚨 Recordatorios Críticos
 
-1. **N8N Workflows están ROTOS** - No intentar usar los actuales
-2. **API Key por defecto**: `datalive-dev-key-change-in-production`
-3. **Puertos principales**: DataLive:8058, N8N:5678, Neo4j:7474
-4. **Golden Path**: `docker-compose up -d` inicia todo automáticamente
-5. **Tests**: Usar `python tests/run_all_tests.py` para verificar estado
+1. **🔴 PROBLEMA PRINCIPAL: N8N Workflows están ROTOS** - Enfocar esfuerzos aquí
+2. **⚠️ RESTRICCIÓN ABSOLUTA**: Solo soluciones gratuitas/open source
+3. **🔒 N8N ES CORE INMUTABLE**: NO proponer alternativas a N8N
+4. **⚡ ENFOQUE EN**: Actualizaciones versión, mejores prácticas N8N, optimizaciones
+5. **🔑 API Key**: `datalive-dev-key-change-in-production`
+6. **🚀 Golden Path**: `docker-compose up -d` inicia todo automáticamente
+7. **🧪 Tests**: `python tests/run_all_tests.py` para verificar estado
 
 ---
 
@@ -202,14 +225,14 @@ cd datalive_agent && python tests/run_all_tests.py --quick
 - Lista de términos de búsqueda utilizados
 - Fuentes principales consultadas
 
-### 💡 Recomendaciones Identificadas
+### 💡 Recomendaciones Identificadas (SOLO GRATUITAS)
 1. **[Categoría]**: Descripción de la mejora
    - **Tecnología actual**: X
-   - **Alternativa sugerida**: Y
+   - **Mejora/Actualización sugerida**: Y (DEBE SER GRATUITA)
    - **Beneficios**: Lista de beneficios
-   - **Esfuerzo estimado**: Bajo/Medio/Alto
-   - **Prioridad**: Baja/Media/Alta
-   - **Compatibilidad**: Notas sobre migración
+   - **Tipo**: Actualización versión / Mejores prácticas N8N / Optimización
+   - **Prioridad**: Baja/Media/Alta (N8N siempre Alta)
+   - **Compatibilidad**: Notas sobre implementación sin cambiar stack
 
 ### ✅ Acciones Priorizadas
 - [ ] Acción 1 (Prioridad Alta)
@@ -229,8 +252,11 @@ cd datalive_agent && python tests/run_all_tests.py --quick
 
 ---
 
-**💡 Tips Importantes**:
+**💡 Tips Críticos**:
 - Guarda este prompt como favorito en Claude Desktop para recontextualización rápida
-- Siempre realizar la búsqueda web ANTES de revisar el código para evitar sesgo
-- Buscar específicamente en últimos 6 meses para información más reciente
-- Considerar tanto mejoras incrementales como cambios arquitectónicos mayores
+- **🔴 PRIORIDAD #1**: Siempre enfocar en resolver problemas de workflows N8N
+- **⚠️ SOLO GRATUITO**: Rechazar cualquier solución de pago o propietaria
+- **🔒 N8N INMUTABLE**: No proponer alternativas a N8N, solo mejorarlo
+- Realizar búsqueda web ANTES de revisar código para evitar sesgo
+- Buscar específicamente actualizaciones de versión (phi3→phi4, pgvector, etc.)
+- Enfocarse en mejores prácticas de N8N workflows y patrones de integración
