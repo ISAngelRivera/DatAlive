@@ -7,7 +7,7 @@ services:
   # =============================================================================
   
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: datalive-postgres
     restart: unless-stopped
     env_file: .env

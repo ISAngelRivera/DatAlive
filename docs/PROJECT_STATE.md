@@ -13,7 +13,7 @@
 - [x] **Configuración Sin Intervención**: Variables generadas automáticamente
 
 ### ✅ Infraestructura Robusta (100%)
-- [x] **Stack Tecnológico**: PostgreSQL + Neo4j + Qdrant + MinIO + Ollama + N8N + Prometheus + Grafana
+- [x] **Stack Tecnológico**: PostgreSQL+pgvector + Neo4j + Qdrant + MinIO + Ollama + N8N + Prometheus + Grafana
 - [x] **Orquestación Docker**: Todos los servicios contenerizados
 - [x] **Gestión de Dependencias**: Poetry para Python, orden de inicio optimizado
 - [x] **Persistencia de Datos**: Volúmenes Docker configurados

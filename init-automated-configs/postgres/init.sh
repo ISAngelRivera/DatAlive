@@ -61,5 +61,13 @@ echo "   💾 CAG tables: $CAG_TABLES"
 MON_TABLES=$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tA -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'monitoring';")
 echo "   📊 Monitoring tables: $MON_TABLES"
 
+# Check pgvector extension
+PGVECTOR_VERSION=$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tA -c "SELECT extversion FROM pg_extension WHERE extname = 'vector';" 2>/dev/null || echo "not_installed")
+if [ "$PGVECTOR_VERSION" != "not_installed" ]; then
+    echo "   🔢 pgvector version: $PGVECTOR_VERSION"
+else
+    echo "   ⚠️  pgvector: not installed"
+fi
+
 echo "✅ PostgreSQL initialization completed successfully"
-echo "🐘 DataLive PostgreSQL is ready!"
+echo "🐘 DataLive PostgreSQL with pgvector is ready!"

@@ -105,7 +105,7 @@ curl -X POST http://localhost:8058/api/v1/query \\
 | **🤖 IA Engine** | Ollama (Phi-4, Llama3) | LLMs locales sin dependencias externas |
 | **🔍 Búsqueda Semántica** | Qdrant | Base de datos vectorial de alta performance |
 | **🕸️ Grafo de Conocimiento** | Neo4j | Relaciones entre entidades y conceptos |
-| **📊 Metadatos** | PostgreSQL | Datos estructurados y logs |
+| **📊 Metadatos + Vectores** | PostgreSQL + pgvector | Datos estructurados, logs y vectores híbridos |
 | **📁 Almacenamiento** | MinIO | Archivos (S3-compatible) |
 | **🔄 Orquestación** | N8N | Workflows y automatización |
 | **🐳 Infraestructura** | Docker + Poetry | Contenerización y dependencias |
