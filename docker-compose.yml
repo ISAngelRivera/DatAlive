@@ -24,7 +24,7 @@ services:
       - datalive-net
 
   neo4j:
-    image: neo4j:5-community
+    image: neo4j:2025.01
     container_name: datalive-neo4j
     restart: unless-stopped
     env_file: .env
@@ -34,6 +34,15 @@ services:
       - NEO4J_server_http_enabled=true
       - NEO4J_server_http_listen__address=0.0.0.0:7474
       - NEO4J_server_config_strict__validation_enabled=false
+      # Neo4j 2025.01 optimizations
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
+      - NEO4J_server_memory_pagecache_size=512m
+      # Block format is default in 2025.01 for new databases
+      - NEO4J_db_format=block
+      # SSL/TLS hostname verification enabled by default in 2025.01
+      - NEO4J_dbms_ssl_policy_bolt_enabled=false
+      - NEO4J_dbms_ssl_policy_https_enabled=false
     ports:
       - "7474:7474"   # HTTP
       - "7473:7473"   # HTTPS
@@ -296,9 +305,17 @@ services:
     environment:
       - OLLAMA_HOST=http://ollama:11434
     command: |
-      "echo '📥 Downloading LLM model...' && \
-       ollama pull ${LLM_MODEL:-phi4-mini} && \
-       echo '✅ Model downloaded successfully'"
+      "echo '📥 Downloading optimized MINI models for production...' && \
+       echo '⚡ Primary model (optimized): ${LLM_MODEL_PRIMARY:-phi4-mini}' && \
+       ollama pull ${LLM_MODEL_PRIMARY:-phi4-mini} && \
+       echo '🔄 Fallback model (efficient): ${LLM_MODEL_FALLBACK:-phi3:mini}' && \
+       ollama pull ${LLM_MODEL_FALLBACK:-phi3:mini} && \
+       echo '🧠 Embedding model: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:v1.5}' && \
+       ollama pull ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:v1.5} && \
+       echo '✅ All MINI models downloaded successfully!' && \
+       echo '💾 Memory footprint optimized for production' && \
+       echo '📊 Available models:' && \
+       ollama list"
     networks:
       - datalive-net
 

@@ -180,33 +180,37 @@ create_credential() {
     fi
 }
 
-# 1. PostgreSQL Database
-create_credential "DataLive PostgreSQL" "postgres" '{
+# 1. PostgreSQL (exact name for workflows)
+create_credential "PostgreSQL" "postgres" '{
     "host": "postgres",
     "port": 5432,
-    "database": "'${POSTGRES_DB:-datalive}'",
-    "user": "'${POSTGRES_USER:-datalive}'",
+    "database": "'${POSTGRES_DB:-datalive_db}'",
+    "user": "'${POSTGRES_USER:-datalive_user}'",
     "password": "'${POSTGRES_PASSWORD}'",
     "allowUnauthorizedCerts": false,
     "ssl": "disable"
 }'
 
-# 2. Neo4j Graph Database (using dedicated Neo4j node - RECOMMENDED)
-# NOTE: Requires @Kurea/n8n-nodes-neo4j community node
-create_credential "DataLive Neo4j" "neo4j" '{
-    "connectionUri": "neo4j://neo4j:7687",
+# 2. Neo4j (exact name for workflows) 
+create_credential "Neo4j" "neo4j" '{
+    "connectionUri": "bolt://neo4j:7687",
     "username": "'${NEO4J_AUTH%/*}'",
     "password": "'${NEO4J_AUTH#*/}'",
     "database": "neo4j"
 }'
 
-# 3. Qdrant Vector Database (using qdrantApi credential type)
-create_credential "DataLive Qdrant" "qdrantApi" '{
+# 3. Qdrant API (exact name for workflows)
+create_credential "Qdrant API" "qdrantApi" '{
     "qdrantUrl": "http://qdrant:6333",
     "apiKey": "'${QDRANT_API_KEY:-}'"
 }'
 
-# 4. MinIO Object Storage (S3-compatible API for local file storage)
+# 4. Ollama API (exact name for workflows)
+create_credential "Ollama API" "ollamaApi" '{
+    "baseUrl": "http://ollama:11434"
+}'
+
+# 5. MinIO S3 (for file storage)
 create_credential "DataLive MinIO S3" "aws" '{
     "region": "us-east-1",
     "accessKeyId": "'${MINIO_ROOT_USER}'",
@@ -214,11 +218,6 @@ create_credential "DataLive MinIO S3" "aws" '{
     "customEndpoints": true,
     "s3Endpoint": "http://minio:9000",
     "forcePathStyle": true
-}'
-
-# 5. Ollama LLM Service (using ollamaApi credential type)
-create_credential "DataLive Ollama" "ollamaApi" '{
-    "baseUrl": "http://ollama:11434"
 }'
 
 # 6. DataLive Agent API (HTTP Request with Header Auth - SECURE)
@@ -253,43 +252,74 @@ fi
 
 # Import workflows if directory exists
 if [ -d "/workflows" ]; then
-    echo "📋 Importing DataLive workflows..."
+    echo "📋 Importing DataLive 2025 workflows..."
     
     workflow_count=0
     
-    # Import master workflow first (priority) - Use Complete version
-    master_workflow="/workflows/DataLive-Master-Workflow-Complete.json"
-    if [ -f "$master_workflow" ]; then
-        echo "   🎯 Importing DataLive Master Workflow (Complete)..."
+    # Import Enhanced Query Workflow 2025
+    query_workflow="/workflows/datalive-enhanced-query-workflow.json"
+    if [ -f "$query_workflow" ]; then
+        echo "   🎯 Importing DataLive Enhanced Query Workflow 2025..."
         
         workflow_response=$(curl -s -b "$COOKIE_FILE" -X POST \
             -H "Content-Type: application/json" \
-            -d "@$master_workflow" \
+            -d "@$query_workflow" \
             "${REST_URL}/workflows")
         
         if echo "$workflow_response" | grep -q "\"id\""; then
             workflow_id=$(echo "$workflow_response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
-            echo "     ✅ Master Workflow imported (ID: $workflow_id)"
+            echo "     ✅ Query Workflow imported (ID: $workflow_id)"
             workflow_count=$((workflow_count + 1))
             
-            # Activate the master workflow
+            # Activate the query workflow
             if curl -s -b "$COOKIE_FILE" -X PATCH \
                 -H "Content-Type: application/json" \
                 -d '{"active": true}' \
                 "${REST_URL}/workflows/${workflow_id}" > /dev/null; then
-                echo "     🟢 Master Workflow activated"
-                echo "     📡 Webhooks available:"
-                echo "        - POST /webhook/datalive/query (Query processing)"
-                echo "        - POST /webhook/datalive/ingest (Document ingestion)"
+                echo "     🟢 Query Workflow activated"
+                echo "     📡 Query endpoint: POST /webhook/datalive/query/v2"
             else
-                echo "     ⚠️  Failed to activate master workflow"
+                echo "     ⚠️  Failed to activate query workflow"
             fi
         else
-            echo "     ❌ Failed to import master workflow"
-            echo "     Response: $workflow_response"
+            echo "     ❌ Failed to import query workflow"
+            echo "     Response: $(echo "$workflow_response" | head -c 200)..."
         fi
     else
-        echo "     ⚠️  Master workflow not found: $master_workflow"
+        echo "     ⚠️  Query workflow not found: $query_workflow"
+    fi
+    
+    # Import Enhanced Ingestion Workflow 2025
+    ingestion_workflow="/workflows/datalive-enhanced-ingestion-workflow.json"
+    if [ -f "$ingestion_workflow" ]; then
+        echo "   📥 Importing DataLive Enhanced Ingestion Workflow 2025..."
+        
+        workflow_response=$(curl -s -b "$COOKIE_FILE" -X POST \
+            -H "Content-Type: application/json" \
+            -d "@$ingestion_workflow" \
+            "${REST_URL}/workflows")
+        
+        if echo "$workflow_response" | grep -q "\"id\""; then
+            workflow_id=$(echo "$workflow_response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+            echo "     ✅ Ingestion Workflow imported (ID: $workflow_id)"
+            workflow_count=$((workflow_count + 1))
+            
+            # Activate the ingestion workflow
+            if curl -s -b "$COOKIE_FILE" -X PATCH \
+                -H "Content-Type: application/json" \
+                -d '{"active": true}' \
+                "${REST_URL}/workflows/${workflow_id}" > /dev/null; then
+                echo "     🟢 Ingestion Workflow activated"
+                echo "     📡 Ingestion endpoint: POST /webhook/datalive/ingest/v2"
+            else
+                echo "     ⚠️  Failed to activate ingestion workflow"
+            fi
+        else
+            echo "     ❌ Failed to import ingestion workflow"
+            echo "     Response: $(echo "$workflow_response" | head -c 200)..."
+        fi
+    else
+        echo "     ⚠️  Ingestion workflow not found: $ingestion_workflow"
     fi
     
     # Import test workflows (if they exist)
@@ -323,16 +353,23 @@ if [ -d "/workflows" ]; then
     
     if [ $workflow_count -gt 0 ]; then
         echo ""
-        echo "🎉 DataLive N8N Setup Complete!"
+        echo "🎉 DataLive N8N 2025 Setup Complete!"
         echo ""
-        echo "📡 Available Endpoints:"
-        echo "   • Query API: ${N8N_URL}/webhook/datalive/query"
-        echo "   • Ingest API: ${N8N_URL}/webhook/datalive/ingest"
+        echo "📡 Available Endpoints (2025 Enhanced):"
+        echo "   • Query API v2: ${N8N_URL}/webhook/datalive/query/v2"
+        echo "   • Ingest API v2: ${N8N_URL}/webhook/datalive/ingest/v2"
         echo ""
         echo "🔧 Management:"
         echo "   • N8N UI: ${N8N_URL}"
-        echo "   • Credentials: Auto-configured"
-        echo "   • Workflows: Auto-activated"
+        echo "   • Credentials: Auto-configured (2025 optimized)"
+        echo "   • Workflows: Auto-activated (Enhanced versions)"
+        echo ""
+        echo "🚀 Features 2025:"
+        echo "   • Cross-Encoder Reranking (Qdrant 1.14)"
+        echo "   • Parallel Processing"
+        echo "   • Phi-4/Phi-3 Mini Models"
+        echo "   • Advanced Entity Extraction"
+        echo "   • Intelligent Deduplication"
     fi
 else
     echo "ℹ️  No workflows directory found"

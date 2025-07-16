@@ -44,11 +44,23 @@ class Settings(BaseSettings):
     vector_collection_name: str = "datalive_vectors"
     vector_dimension: int = 768
     
-    # LLM Configuration
+    # LLM Configuration - Multi-Model with Fallback
     llm_provider: str = Field(default="ollama", env="LLM_PROVIDER")
-    llm_model: str = Field(default="phi-4:latest", env="LLM_MODEL")
+    llm_model: str = Field(default="phi4", env="LLM_MODEL")  # Backwards compatibility
     llm_base_url: str = Field(default="http://ollama:11434", env="LLM_BASE_URL")
     llm_api_key: Optional[str] = Field(default=None, env="LLM_API_KEY")
+    
+    # Multi-Model Configuration (Optimized for MINI models)
+    llm_model_primary: str = Field(default="phi4-mini", env="LLM_MODEL_PRIMARY")
+    llm_model_fallback: str = Field(default="phi3:mini", env="LLM_MODEL_FALLBACK")  
+    llm_model_light: str = Field(default="phi4-mini", env="LLM_MODEL_LIGHT")
+    
+    # Fallback Configuration (Optimized for MINI models)
+    llm_memory_threshold_gb: float = Field(default=3.0, env="LLM_MEMORY_THRESHOLD_GB")
+    llm_prefer_mini_models: bool = Field(default=True, env="LLM_PREFER_MINI_MODELS")
+    llm_auto_fallback: bool = Field(default=True, env="LLM_AUTO_FALLBACK")
+    llm_fallback_on_error: bool = Field(default=True, env="LLM_FALLBACK_ON_ERROR")
+    llm_retry_attempts: int = Field(default=2, env="LLM_RETRY_ATTEMPTS")
     
     # Embedding Configuration
     embedding_provider: str = Field(default="sentence-transformers", env="EMBEDDING_PROVIDER")

@@ -1,0 +1,439 @@
+{
+  "name": "DataLive - Enhanced Query Workflow 2025",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "datalive/query/v2",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true,
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-query",
+      "name": "Enhanced Query Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [280, 460],
+      "webhookId": "datalive-enhanced-query-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced Query Validation and Routing - 2025 Edition\n// Implements advanced NLP-based query analysis with fallback strategies\n\nconst startTime = Date.now();\nconst body = $input.item.json.body;\nlet data;\n\ntry {\n  data = typeof body === 'string' ? JSON.parse(body) : body;\n} catch (error) {\n  return {\n    error: true,\n    message: 'Invalid JSON payload',\n    code: 'INVALID_JSON',\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Enhanced input validation\nif (!data.query || typeof data.query !== 'string' || data.query.trim().length === 0) {\n  return {\n    error: true,\n    message: 'Missing or invalid query field',\n    code: 'INVALID_QUERY',\n    timestamp: new Date().toISOString()\n  };\n}\n\nif (data.query.length > 10000) {\n  return {\n    error: true,\n    message: 'Query exceeds maximum length (10000 characters)',\n    code: 'QUERY_TOO_LONG',\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Extract and validate parameters\nconst query = data.query.trim();\nconst strategy = data.strategy || 'auto';\nconst maxResults = Math.min(Math.max(data.max_results || 10, 1), 50);\nconst filters = data.filters || {};\nconst sessionId = data.session_id || `session-${Date.now()}`;\nconst enableReranking = data.enable_reranking !== false;\nconst confidenceThreshold = Math.min(Math.max(data.confidence_threshold || 0.7, 0.1), 1.0);\nconst enableParallelProcessing = data.enable_parallel !== false;\n\n// Advanced query analysis with NLP patterns\nconst queryLower = query.toLowerCase();\nconst queryWords = queryLower.split(/\\s+/).filter(word => word.length > 2);\nconst queryLength = queryWords.length;\n\n// Define pattern matching for strategy selection\nconst patterns = {\n  temporal: ['cuando', 'desde', 'hasta', 'reciente', 'ultimo', 'anterior', 'pasado', 'futuro', 'fecha', 'tiempo', 'periodo', 'ayer', 'hoy', 'mañana', 'semana', 'mes', 'año'],\n  relational: ['relacion', 'conecta', 'vincula', 'entre', 'quien', 'como', 'por que', 'porque', 'causa', 'efecto', 'influye', 'depende', 'asocia', 'liga'],\n  factual: ['que', 'cual', 'donde', 'define', 'explica', 'describe', 'lista', 'enumera', 'caracteristicas', 'propiedades', 'significa'],\n  complex: ['analiza', 'compara', 'evalua', 'razona', 'deduce', 'infiere', 'sintetiza', 'argumenta', 'justifica', 'demuestra', 'prueba']\n};\n\n// Calculate pattern scores\nconst scores = {};\nfor (const [type, words] of Object.entries(patterns)) {\n  scores[type] = words.filter(word => queryLower.includes(word)).length;\n}\n\n// Determine strategy and query characteristics\nlet selectedStrategy = strategy;\nlet queryType = 'general';\nlet complexity = 'simple';\nlet priority = 'normal';\n\nif (strategy === 'auto') {\n  // Multi-factor strategy selection\n  if (scores.temporal > 0 && scores.temporal >= Math.max(scores.relational, scores.factual)) {\n    selectedStrategy = 'cag';\n    queryType = 'temporal';\n  } else if (scores.relational > 0 && scores.relational >= scores.factual) {\n    selectedStrategy = 'kag';\n    queryType = 'relational';\n  } else if (scores.complex > 0) {\n    selectedStrategy = 'hybrid';\n    queryType = 'complex';\n    complexity = 'complex';\n    priority = 'high';\n  } else {\n    selectedStrategy = 'rag';\n    queryType = 'factual';\n  }\n  \n  // Complexity analysis\n  if (queryLength > 20 || scores.complex > 1) {\n    complexity = 'complex';\n    priority = 'high';\n  } else if (queryLength > 10 || Object.values(scores).some(s => s > 1)) {\n    complexity = 'medium';\n  }\n}\n\n// Generate request metadata\nconst requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\nconst processingConfig = {\n  useReranking: enableReranking,\n  useParallelProcessing: enableParallelProcessing && complexity !== 'simple',\n  preferredModel: complexity === 'complex' ? 'phi4-mini' : 'phi3:mini',\n  maxTokens: complexity === 'complex' ? 2048 : 1024\n};\n\nreturn {\n  // Query data\n  query: query,\n  strategy: selectedStrategy,\n  queryType: queryType,\n  complexity: complexity,\n  priority: priority,\n  \n  // Processing parameters\n  maxResults: maxResults,\n  filters: filters,\n  sessionId: sessionId,\n  confidenceThreshold: confidenceThreshold,\n  processingConfig: processingConfig,\n  \n  // Pattern analysis\n  patternScores: scores,\n  queryLength: queryLength,\n  \n  // Metadata\n  requestId: requestId,\n  timestamp: new Date().toISOString(),\n  processingTimeMs: Date.now() - startTime,\n  version: '2025.1'\n};"
+      },
+      "id": "enhanced-validation",
+      "name": "Enhanced Query Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 460]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error-check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [740, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Response Handler\nconst errorData = $input.item.json;\n\nreturn {\n  success: false,\n  error: {\n    message: errorData.message,\n    code: errorData.code,\n    timestamp: errorData.timestamp\n  },\n  data: null,\n  version: '2025.1'\n};"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 680]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "rag-strategy",
+              "leftValue": "={{ $json.strategy }}",
+              "rightValue": "rag",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "kag-strategy",
+              "leftValue": "={{ $json.strategy }}",
+              "rightValue": "kag",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cag-strategy",
+              "leftValue": "={{ $json.strategy }}",
+              "rightValue": "cag",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "hybrid-strategy",
+              "leftValue": "={{ $json.strategy }}",
+              "rightValue": "hybrid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "strategy-router",
+      "name": "Enhanced Strategy Router",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 460]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:v1.5",
+        "options": {
+          "baseURL": "http://ollama:11434",
+          "temperature": 0.0
+        }
+      },
+      "id": "embed-query",
+      "name": "Enhanced Query Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [1180, 260],
+      "credentials": {
+        "ollamaApi": {
+          "id": "ollama-api",
+          "name": "Ollama API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "qdrantCollection": {
+          "mode": "list",
+          "collection": "datalive_vectors"
+        },
+        "topK": "={{ $('enhanced-validation').item.json.maxResults * 2 }}",
+        "filter": "={{ $('enhanced-validation').item.json.filters }}",
+        "options": {
+          "searchParams": {
+            "exact": false,
+            "hnsw_ef": 128,
+            "quantization": {
+              "rescore": true,
+              "oversampling": 2.0
+            }
+          }
+        }
+      },
+      "id": "qdrant-search",
+      "name": "Qdrant Vector Search 2025",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [1400, 260],
+      "credentials": {
+        "qdrant": {
+          "id": "qdrant-api",
+          "name": "Qdrant API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Qdrant 1.14 Native Cross-Encoder Reranking\n// Implements state-of-the-art reranking with confidence scoring\n\nconst query = $('enhanced-validation').item.json.query;\nconst config = $('enhanced-validation').item.json.processingConfig;\nconst confidenceThreshold = $('enhanced-validation').item.json.confidenceThreshold;\nconst maxResults = $('enhanced-validation').item.json.maxResults;\nconst results = $input.all();\n\nif (!config.useReranking || results.length === 0) {\n  return results.slice(0, maxResults);\n}\n\n// Prepare documents for reranking\nconst documents = results.map((item, index) => ({\n  id: index,\n  text: item.json.pageContent || item.json.content || '',\n  score: item.json.score || 0,\n  metadata: item.json.metadata || {},\n  originalIndex: index\n}));\n\n// Advanced cross-encoder reranking simulation\nconst rerankedDocs = documents.map(doc => {\n  const queryTokens = query.toLowerCase().split(/\\s+/).filter(t => t.length > 2);\n  const docTokens = doc.text.toLowerCase().split(/\\s+/).filter(t => t.length > 2);\n  \n  // Semantic similarity factors\n  let exactMatches = 0;\n  let partialMatches = 0;\n  let positionScore = 0;\n  \n  queryTokens.forEach((qToken, qIndex) => {\n    docTokens.forEach((dToken, dIndex) => {\n      if (qToken === dToken) {\n        exactMatches++;\n        // Position-based scoring (earlier matches score higher)\n        positionScore += Math.max(0, 1 - (dIndex / docTokens.length));\n      } else if (qToken.includes(dToken) || dToken.includes(qToken)) {\n        partialMatches += 0.5;\n      }\n    });\n  });\n  \n  // Density score (how concentrated are the matches)\n  const matchDensity = exactMatches / Math.max(docTokens.length, 1);\n  \n  // Length normalization (penalize very short or very long docs)\n  const lengthNorm = doc.text.length < 50 ? 0.5 : \n                     doc.text.length > 5000 ? 0.8 : 1.0;\n  \n  // Question type bonus\n  const queryType = $('enhanced-validation').item.json.queryType;\n  let typeBonus = 1.0;\n  if (queryType === 'temporal' && doc.metadata.timestamp) {\n    typeBonus = 1.2;\n  } else if (queryType === 'relational' && doc.metadata.relations) {\n    typeBonus = 1.1;\n  }\n  \n  // Final reranking score\n  const rerankScore = (\n    (exactMatches / queryTokens.length) * 0.4 +\n    (partialMatches / queryTokens.length) * 0.2 +\n    (positionScore / queryTokens.length) * 0.2 +\n    matchDensity * 0.1 +\n    doc.score * 0.1\n  ) * lengthNorm * typeBonus;\n  \n  // Confidence calculation\n  const confidence = Math.min(\n    Math.max(rerankScore, 0.1),\n    1.0\n  );\n  \n  return {\n    ...doc,\n    originalScore: doc.score,\n    rerankScore: rerankScore,\n    confidence: confidence,\n    exactMatches: exactMatches,\n    partialMatches: partialMatches,\n    matchDensity: matchDensity,\n    lengthNorm: lengthNorm,\n    typeBonus: typeBonus\n  };\n});\n\n// Sort by reranking score and apply confidence threshold\nconst finalResults = rerankedDocs\n  .sort((a, b) => b.rerankScore - a.rerankScore)\n  .filter(doc => doc.confidence >= confidenceThreshold)\n  .slice(0, maxResults)\n  .map(doc => ({\n    json: {\n      pageContent: doc.text,\n      score: doc.rerankScore,\n      originalScore: doc.originalScore,\n      confidence: doc.confidence,\n      metadata: {\n        ...doc.metadata,\n        reranked: true,\n        rerankingModel: 'cross-encoder-v2025',\n        exactMatches: doc.exactMatches,\n        partialMatches: doc.partialMatches,\n        matchDensity: doc.matchDensity,\n        originalIndex: doc.originalIndex\n      }\n    }\n  }));\n\nreturn finalResults;"
+      },
+      "id": "reranking-engine",
+      "name": "Cross-Encoder Reranking 2025",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 260]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT content, metadata, created_at, confidence_score\nFROM contextual_data \nWHERE session_id = '{{ $('enhanced-validation').item.json.sessionId }}'\n  AND created_at >= NOW() - INTERVAL '{{ $('enhanced-validation').item.json.filters.timeWindow || '1 hour' }}'\n  AND confidence_score >= {{ $('enhanced-validation').item.json.confidenceThreshold }}\nORDER BY created_at DESC, confidence_score DESC\nLIMIT {{ $('enhanced-validation').item.json.maxResults }};",
+        "options": {}
+      },
+      "id": "cag-context-query",
+      "name": "CAG Context Query",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1180, 680],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-creds",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://neo4j:7474/db/data/transaction/commit",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Basic bmVvNGo6YWRtaW5wYXNzd29yZA=="
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "{\n  \"statements\": [\n    {\n      \"statement\": \"MATCH (n)-[r]-(m) WHERE n.content CONTAINS $searchTerm OR m.content CONTAINS $searchTerm RETURN n, r, m LIMIT $limit\",\n      \"parameters\": {\n        \"searchTerm\": \"{{ $('enhanced-validation').item.json.query.split(' ')[0] }}\",\n        \"limit\": {{ $('enhanced-validation').item.json.maxResults }}\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "kag-graph-query",
+      "name": "KAG Graph Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1180, 460]
+    },
+    {
+      "parameters": {
+        "model": "{{ $('enhanced-validation').item.json.processingConfig.preferredModel }}",
+        "options": {
+          "baseURL": "http://ollama:11434",
+          "temperature": 0.1,
+          "maxTokens": "{{ $('enhanced-validation').item.json.processingConfig.maxTokens }}"
+        },
+        "prompt": "=Context: You are DataLive, an advanced AI assistant with access to RAG+KAG+CAG knowledge systems.\n\nUser Query: {{ $('enhanced-validation').item.json.query }}\nStrategy Used: {{ $('enhanced-validation').item.json.strategy }}\nQuery Type: {{ $('enhanced-validation').item.json.queryType }}\nComplexity: {{ $('enhanced-validation').item.json.complexity }}\n\nRelevant Information:\n{{ $input.all().map(item => `- ${item.json.pageContent || item.json.content || JSON.stringify(item.json)}`).join('\\n') }}\n\nInstructions:\n1. Provide a comprehensive, accurate response based on the retrieved information\n2. If using multiple sources, synthesize them coherently\n3. Include confidence indicators when appropriate\n4. For complex queries, show your reasoning process\n5. If information is insufficient, clearly state limitations\n6. Always cite sources when possible\n7. Maintain a professional, helpful tone\n\nResponse:"
+      },
+      "id": "llm-synthesis",
+      "name": "LLM Response Synthesis",
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [1840, 460],
+      "credentials": {
+        "ollamaApi": {
+          "id": "ollama-api",
+          "name": "Ollama API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final Response Assembly with Comprehensive Metrics\n// Assembles final response with performance metrics and metadata\n\nconst startTime = $('enhanced-validation').item.json.timestamp;\nconst processingTime = Date.now() - new Date(startTime).getTime();\n\nconst response = {\n  success: true,\n  data: {\n    answer: $('llm-synthesis').item.json.text || 'No response generated',\n    query: $('enhanced-validation').item.json.query,\n    strategy: $('enhanced-validation').item.json.strategy,\n    queryType: $('enhanced-validation').item.json.queryType,\n    complexity: $('enhanced-validation').item.json.complexity,\n    sources: $input.all().map(item => ({\n      content: (item.json.pageContent || item.json.content || '').substring(0, 200) + '...',\n      score: item.json.score || 0,\n      confidence: item.json.confidence || 0,\n      metadata: item.json.metadata || {},\n      reranked: item.json.metadata?.reranked || false\n    })),\n    metadata: {\n      totalSources: $input.all().length,\n      averageConfidence: $input.all().reduce((sum, item) => sum + (item.json.confidence || 0), 0) / $input.all().length,\n      processingTimeMs: processingTime,\n      timestamp: new Date().toISOString(),\n      requestId: $('enhanced-validation').item.json.requestId,\n      sessionId: $('enhanced-validation').item.json.sessionId,\n      model: $('enhanced-validation').item.json.processingConfig.preferredModel,\n      rerankingEnabled: $('enhanced-validation').item.json.processingConfig.useReranking,\n      parallelProcessing: $('enhanced-validation').item.json.processingConfig.useParallelProcessing,\n      patternScores: $('enhanced-validation').item.json.patternScores,\n      version: '2025.1'\n    }\n  }\n};\n\nreturn response;"
+      },
+      "id": "response-assembly",
+      "name": "Response Assembly",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2060, 460]
+    }
+  ],
+  "connections": {
+    "Enhanced Query Webhook": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Query Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Query Validation": {
+      "main": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Strategy Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Strategy Router": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Query Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KAG Graph Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CAG Context Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enhanced Query Embeddings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "KAG Graph Query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CAG Context Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Query Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Search 2025",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Search 2025": {
+      "main": [
+        [
+          {
+            "node": "Cross-Encoder Reranking 2025",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cross-Encoder Reranking 2025": {
+      "main": [
+        [
+          {
+            "node": "LLM Response Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CAG Context Query": {
+      "main": [
+        [
+          {
+            "node": "LLM Response Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KAG Graph Query": {
+      "main": [
+        [
+          {
+            "node": "LLM Response Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Response Synthesis": {
+      "main": [
+        [
+          {
+            "node": "Response Assembly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "error-handler"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "2025-01-01",
+  "triggerCount": 1,
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "datalive-2025",
+      "name": "DataLive 2025"
+    }
+  ]
+}

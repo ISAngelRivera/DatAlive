@@ -1,0 +1,407 @@
+{
+  "name": "DataLive - Enhanced Ingestion Workflow 2025",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "datalive/ingest/v2",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true,
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "ingestion-webhook",
+      "name": "Enhanced Ingestion Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [280, 460],
+      "webhookId": "datalive-enhanced-ingestion-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced Document Validation and Preprocessing - 2025 Edition\n// Supports multiple formats with intelligent content extraction\n\nconst startTime = Date.now();\nconst body = $input.item.json.body;\nlet data;\n\ntry {\n  data = typeof body === 'string' ? JSON.parse(body) : body;\n} catch (error) {\n  return {\n    error: true,\n    message: 'Invalid JSON payload',\n    code: 'INVALID_JSON',\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Enhanced validation\nif (!data.source_type || !data.source) {\n  return {\n    error: true,\n    message: 'Missing required fields: source_type and source',\n    code: 'MISSING_FIELDS',\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Extended supported formats for 2025\nconst validTypes = [\n  'txt', 'pdf', 'docx', 'md', 'csv', 'json', 'xml', 'html', \n  'rtf', 'odt', 'xlsx', 'pptx', 'epub', 'yaml'\n];\n\nif (!validTypes.includes(data.source_type.toLowerCase())) {\n  return {\n    error: true,\n    message: `Invalid source_type. Must be one of: ${validTypes.join(', ')}`,\n    code: 'INVALID_SOURCE_TYPE',\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Content size validation (max 50MB)\nconst maxSize = 50 * 1024 * 1024; // 50MB\nif (data.source.length > maxSize) {\n  return {\n    error: true,\n    message: 'Content exceeds maximum size (50MB)',\n    code: 'CONTENT_TOO_LARGE',\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Enhanced metadata processing\nconst baseMetadata = {\n  ingested_at: new Date().toISOString(),\n  source_type: data.source_type.toLowerCase(),\n  filename: data.filename || `document.${data.source_type}`,\n  content_length: data.source.length,\n  processing_version: '2025.1'\n};\n\n// Merge with provided metadata\nconst metadata = {\n  ...baseMetadata,\n  ...data.metadata,\n  tags: data.metadata?.tags || [],\n  category: data.metadata?.category || 'general',\n  priority: data.metadata?.priority || 'normal',\n  language: data.metadata?.language || 'auto-detect'\n};\n\n// Content preprocessing based on type\nlet processedContent = data.source;\nlet contentType = 'text';\n\n// Intelligent content extraction\nswitch (data.source_type.toLowerCase()) {\n  case 'json':\n    try {\n      const jsonData = JSON.parse(data.source);\n      processedContent = JSON.stringify(jsonData, null, 2);\n      contentType = 'structured';\n    } catch (e) {\n      processedContent = data.source;\n    }\n    break;\n    \n  case 'csv':\n    // Basic CSV processing\n    const lines = data.source.split('\\n');\n    const headers = lines[0]?.split(',') || [];\n    metadata.csv_headers = headers;\n    metadata.csv_rows = lines.length - 1;\n    contentType = 'tabular';\n    break;\n    \n  case 'xml':\n  case 'html':\n    // Strip HTML/XML tags for basic text extraction\n    processedContent = data.source.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim();\n    contentType = 'markup';\n    break;\n    \n  case 'md':\n    // Remove markdown formatting for embedding\n    processedContent = data.source\n      .replace(/#{1,6}\\s+/g, '') // Headers\n      .replace(/\\*\\*(.*?)\\*\\*/g, '$1') // Bold\n      .replace(/\\*(.*?)\\*/g, '$1') // Italic\n      .replace(/\\[([^\\]]+)\\]\\([^\\)]+\\)/g, '$1') // Links\n      .replace(/`([^`]+)`/g, '$1'); // Inline code\n    contentType = 'markdown';\n    break;\n    \n  default:\n    contentType = 'text';\n}\n\n// Basic entity extraction\nconst entities = {\n  emails: (processedContent.match(/\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/g) || []),\n  urls: (processedContent.match(/https?:\\/\\/[^\\s]+/g) || []),\n  phones: (processedContent.match(/\\b\\d{3}[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b/g) || []),\n  dates: (processedContent.match(/\\b\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4}\\b/g) || [])\n};\n\n// Processing configuration\nconst processingConfig = {\n  chunkSize: data.chunk_size || (contentType === 'structured' ? 2000 : 1000),\n  chunkOverlap: data.chunk_overlap || 200,\n  enableParallelProcessing: data.enable_parallel !== false,\n  extractEntities: data.extract_entities !== false,\n  generateSummary: data.generate_summary === true,\n  enableDeduplication: data.enable_deduplication !== false\n};\n\n// Generate unique document ID\nconst documentId = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\n\nreturn {\n  // Content data\n  content: processedContent,\n  originalContent: data.source,\n  contentType: contentType,\n  \n  // Processing data\n  sourceType: data.source_type.toLowerCase(),\n  metadata: metadata,\n  entities: entities,\n  processingConfig: processingConfig,\n  \n  // Metadata\n  documentId: documentId,\n  timestamp: new Date().toISOString(),\n  processingTimeMs: Date.now() - startTime,\n  version: '2025.1'\n};"
+      },
+      "id": "enhanced-validation",
+      "name": "Enhanced Document Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 460]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error-check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [740, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Response Handler\nconst errorData = $input.item.json;\n\nreturn {\n  success: false,\n  error: {\n    message: errorData.message,\n    code: errorData.code,\n    timestamp: errorData.timestamp\n  },\n  data: null,\n  version: '2025.1'\n};"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 680]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "chunkSize": "={{ $('enhanced-validation').item.json.processingConfig.chunkSize }}",
+        "chunkOverlap": "={{ $('enhanced-validation').item.json.processingConfig.chunkOverlap }}",
+        "options": {
+          "separators": [
+            "\\n\\n",
+            "\\n",
+            " ",
+            ""
+          ],
+          "keepSeparator": false
+        }
+      },
+      "id": "intelligent-chunking",
+      "name": "Intelligent Text Chunking",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [960, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parallel Chunk Processing with Deduplication\n// Implements intelligent deduplication and metadata enrichment\n\nconst config = $('enhanced-validation').item.json.processingConfig;\nconst baseMetadata = $('enhanced-validation').item.json.metadata;\nconst documentId = $('enhanced-validation').item.json.documentId;\nconst entities = $('enhanced-validation').item.json.entities;\nconst chunks = $input.all();\n\nif (!config.enableDeduplication) {\n  // No deduplication, just add metadata and return\n  return chunks.map((chunk, index) => ({\n    json: {\n      pageContent: chunk.json.pageContent,\n      metadata: {\n        ...baseMetadata,\n        chunkId: `${documentId}-chunk-${index}`,\n        chunkIndex: index,\n        totalChunks: chunks.length,\n        chunkLength: chunk.json.pageContent.length\n      }\n    }\n  }));\n}\n\n// Advanced deduplication using content similarity\nconst deduplicatedChunks = [];\nconst seenChunks = new Set();\n\nchunks.forEach((chunk, index) => {\n  const content = chunk.json.pageContent.trim();\n  \n  // Skip empty chunks\n  if (content.length < 50) {\n    return;\n  }\n  \n  // Simple content hash for exact duplicates\n  const contentHash = content.toLowerCase().replace(/\\s+/g, ' ');\n  \n  if (!seenChunks.has(contentHash)) {\n    seenChunks.add(contentHash);\n    \n    // Calculate chunk-specific entities\n    const chunkEntities = {\n      emails: (content.match(/\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/g) || []),\n      urls: (content.match(/https?:\\/\\/[^\\s]+/g) || []),\n      phones: (content.match(/\\b\\d{3}[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b/g) || [])\n    };\n    \n    // Determine chunk priority based on content\n    let priority = 'normal';\n    if (chunkEntities.emails.length > 0 || chunkEntities.urls.length > 0) {\n      priority = 'high';\n    } else if (content.includes('importante') || content.includes('crítico') || content.includes('urgente')) {\n      priority = 'high';\n    }\n    \n    deduplicatedChunks.push({\n      json: {\n        pageContent: content,\n        metadata: {\n          ...baseMetadata,\n          chunkId: `${documentId}-chunk-${deduplicatedChunks.length}`,\n          chunkIndex: deduplicatedChunks.length,\n          originalIndex: index,\n          totalChunks: chunks.length,\n          chunkLength: content.length,\n          chunkPriority: priority,\n          chunkEntities: chunkEntities,\n          hasEntities: Object.values(chunkEntities).some(arr => arr.length > 0),\n          deduplicationApplied: true\n        }\n      }\n    });\n  }\n});\n\nreturn deduplicatedChunks;"
+      },
+      "id": "parallel-processing",
+      "name": "Parallel Chunk Processing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 460]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:v1.5",
+        "options": {
+          "baseURL": "http://ollama:11434",
+          "temperature": 0.0,
+          "batchSize": 10
+        }
+      },
+      "id": "batch-embeddings",
+      "name": "Batch Embeddings Generation",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [1400, 460],
+      "credentials": {
+        "ollamaApi": {
+          "id": "ollama-api",
+          "name": "Ollama API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "qdrantCollection": {
+          "mode": "list",
+          "collection": "datalive_vectors"
+        },
+        "options": {
+          "batchSize": 50,
+          "parallelism": 4,
+          "updateVectors": false
+        }
+      },
+      "id": "qdrant-bulk-insert",
+      "name": "Qdrant Bulk Insert",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [1620, 460],
+      "credentials": {
+        "qdrant": {
+          "id": "qdrant-api",
+          "name": "Qdrant API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "documents",
+        "dataMode": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "document_id",
+              "fieldValue": "={{ $('enhanced-validation').item.json.documentId }}"
+            },
+            {
+              "fieldName": "source_type",
+              "fieldValue": "={{ $('enhanced-validation').item.json.sourceType }}"
+            },
+            {
+              "fieldName": "content_type",
+              "fieldValue": "={{ $('enhanced-validation').item.json.contentType }}"
+            },
+            {
+              "fieldName": "original_content",
+              "fieldValue": "={{ $('enhanced-validation').item.json.originalContent }}"
+            },
+            {
+              "fieldName": "processed_content",
+              "fieldValue": "={{ $('enhanced-validation').item.json.content }}"
+            },
+            {
+              "fieldName": "metadata",
+              "fieldValue": "={{ JSON.stringify($('enhanced-validation').item.json.metadata) }}"
+            },
+            {
+              "fieldName": "entities",
+              "fieldValue": "={{ JSON.stringify($('enhanced-validation').item.json.entities) }}"
+            },
+            {
+              "fieldName": "chunk_count",
+              "fieldValue": "={{ $('parallel-processing').all().length }}"
+            },
+            {
+              "fieldName": "processing_config",
+              "fieldValue": "={{ JSON.stringify($('enhanced-validation').item.json.processingConfig) }}"
+            },
+            {
+              "fieldName": "ingested_at",
+              "fieldValue": "={{ $('enhanced-validation').item.json.timestamp }}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "processed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "postgres-insert",
+      "name": "PostgreSQL Document Insert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1400, 680],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-api",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optional: Generate Document Summary using LLM\n// Only if requested in processing config\n\nconst config = $('enhanced-validation').item.json.processingConfig;\nconst content = $('enhanced-validation').item.json.content;\n\nif (!config.generateSummary) {\n  return {\n    summary: null,\n    summaryGenerated: false,\n    reason: 'Summary generation disabled'\n  };\n}\n\n// Prepare content for summarization (truncate if too long)\nconst maxSummaryLength = 2000;\nconst contentForSummary = content.length > maxSummaryLength \n  ? content.substring(0, maxSummaryLength) + '...'\n  : content;\n\nreturn {\n  contentForSummary: contentForSummary,\n  summaryRequested: true\n};"
+      },
+      "id": "summary-preparation",
+      "name": "Summary Preparation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 680]
+    },
+    {
+      "parameters": {
+        "model": "phi4-mini",
+        "options": {
+          "baseURL": "http://ollama:11434",
+          "temperature": 0.3,
+          "maxTokens": 512
+        },
+        "prompt": "=Generate a concise summary of the following document content:\n\n{{ $('summary-preparation').item.json.contentForSummary }}\n\nProvide a summary in 2-3 sentences highlighting the main points and key information."
+      },
+      "id": "llm-summarization",
+      "name": "LLM Document Summarization",
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [1840, 680],
+      "credentials": {
+        "ollamaApi": {
+          "id": "ollama-api",
+          "name": "Ollama API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final Response Assembly with Processing Statistics\n// Comprehensive response with performance metrics\n\nconst startTime = $('enhanced-validation').item.json.timestamp;\nconst processingTime = Date.now() - new Date(startTime).getTime();\nconst documentData = $('enhanced-validation').item.json;\nconst chunks = $('parallel-processing').all();\nconst entities = documentData.entities;\n\n// Calculate processing statistics\nconst stats = {\n  documentsProcessed: 1,\n  chunksCreated: chunks.length,\n  originalContentLength: documentData.originalContent.length,\n  processedContentLength: documentData.content.length,\n  entitiesExtracted: Object.values(entities).flat().length,\n  deduplicationApplied: documentData.processingConfig.enableDeduplication,\n  summaryGenerated: documentData.processingConfig.generateSummary,\n  processingTimeMs: processingTime,\n  averageChunkSize: chunks.length > 0 ? Math.round(chunks.reduce((sum, chunk) => sum + chunk.json.pageContent.length, 0) / chunks.length) : 0\n};\n\n// Get summary if available\nconst summaryData = $('llm-summarization').first();\nconst summary = summaryData?.json?.text || null;\n\nconst response = {\n  success: true,\n  data: {\n    documentId: documentData.documentId,\n    sourceType: documentData.sourceType,\n    contentType: documentData.contentType,\n    filename: documentData.metadata.filename,\n    summary: summary,\n    entities: entities,\n    chunks: chunks.map(chunk => ({\n      id: chunk.json.metadata.chunkId,\n      length: chunk.json.metadata.chunkLength,\n      priority: chunk.json.metadata.chunkPriority,\n      hasEntities: chunk.json.metadata.hasEntities\n    })),\n    metadata: {\n      ...documentData.metadata,\n      processingStats: stats,\n      version: '2025.1'\n    }\n  }\n};\n\nreturn response;"
+      },
+      "id": "response-assembly",
+      "name": "Final Response Assembly",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2060, 460]
+    }
+  ],
+  "connections": {
+    "Enhanced Ingestion Webhook": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Document Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Document Validation": {
+      "main": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Intelligent Text Chunking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intelligent Text Chunking": {
+      "main": [
+        [
+          {
+            "node": "Parallel Chunk Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parallel Chunk Processing": {
+      "main": [
+        [
+          {
+            "node": "Batch Embeddings Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Embeddings Generation": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Bulk Insert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PostgreSQL Document Insert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Summary Preparation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL Document Insert": {
+      "main": [
+        [
+          {
+            "node": "Final Response Assembly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary Preparation": {
+      "main": [
+        [
+          {
+            "node": "LLM Document Summarization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Document Summarization": {
+      "main": [
+        [
+          {
+            "node": "Final Response Assembly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Bulk Insert": {
+      "main": [
+        [
+          {
+            "node": "Final Response Assembly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "error-handler",
+    "timezone": "Europe/Madrid"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "2025-01-01",
+  "triggerCount": 1,
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "datalive-2025",
+      "name": "DataLive 2025"
+    }
+  ]
+}

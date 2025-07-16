@@ -83,21 +83,29 @@ async def init_neo4j():
     global _neo4j_driver
     
     try:
+        # Use bolt+s:// scheme to avoid routing issues with Neo4j 2025.01
+        neo4j_url = settings.neo4j_url.replace("neo4j://", "bolt://")
+        
         _neo4j_driver = AsyncGraphDatabase.driver(
-            settings.neo4j_url,
+            neo4j_url,
             auth=("neo4j", "adminpassword"),
             max_connection_lifetime=3600,
             max_connection_pool_size=50
         )
         
-        # Test connection
-        await _neo4j_driver.verify_connectivity()
+        # Test connection with timeout
+        try:
+            await asyncio.wait_for(_neo4j_driver.verify_connectivity(), timeout=10.0)
+        except asyncio.TimeoutError:
+            logger.warning("Neo4j connection verification timed out, but will continue")
         
         logger.info("Neo4j driver initialized")
         
     except Exception as e:
         logger.error(f"Failed to initialize Neo4j: {e}")
-        raise
+        # For now, make Neo4j optional to avoid blocking startup
+        logger.warning("Continuing without Neo4j connection - KAG features will be disabled")
+        _neo4j_driver = None
 
 
 async def close_neo4j():
@@ -110,7 +118,7 @@ async def close_neo4j():
         logger.info("Neo4j driver closed")
 
 
-async def get_neo4j_driver() -> AsyncGraphDatabase:
+async def get_neo4j_driver() -> Optional[AsyncGraphDatabase]:
     """Get Neo4j driver"""
     if not _neo4j_driver:
         await init_neo4j()
